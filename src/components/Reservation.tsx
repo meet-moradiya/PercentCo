@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface FormData {
@@ -18,18 +18,41 @@ interface FormErrors {
   [key: string]: string;
 }
 
-const timeSlots = [
-  "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM",
-  "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM",
-];
+const occasions = ["None", "Birthday", "Anniversary", "Date Night", "Business Dinner", "Engagement", "Other"];
 
-const occasions = [
-  "None", "Birthday", "Anniversary", "Date Night",
-  "Business Dinner", "Engagement", "Other",
-];
+function generateTimeSlots(openTime: string, closeTime: string, interval: number): string[] {
+  const slots: string[] = [];
+  const [oh, om] = openTime.split(":").map(Number);
+  const [ch, cm] = closeTime.split(":").map(Number);
+  const openMin = oh * 60 + om;
+  const closeMin = ch * 60 + cm;
+
+  for (let m = openMin; m <= closeMin; m += interval) {
+    const h24 = Math.floor(m / 60);
+    const mins = m % 60;
+    const ampm = h24 >= 12 ? "PM" : "AM";
+    const h12 = h24 > 12 ? h24 - 12 : h24 === 0 ? 12 : h24;
+    slots.push(`${h12}:${mins.toString().padStart(2, "0")} ${ampm}`);
+  }
+  return slots;
+}
+
+// Client-side time parser (same logic as server-side but for the browser)
+function parseTimeSlot(timeStr: string): number {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return 0;
+  let h = parseInt(match[1]);
+  const m = parseInt(match[2]);
+  const period = match[3].toUpperCase();
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
 
 export default function Reservation() {
   const sectionRef = useScrollReveal();
+  const [allTimeSlots, setAllTimeSlots] = useState<string[]>([]);
+  const [closedDates, setClosedDates] = useState<{ date: string; reason: string }[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
@@ -42,6 +65,40 @@ export default function Reservation() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  // Fetch restaurant settings to build dynamic time slots and closed dates
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.settings) {
+          const slots = generateTimeSlots(data.settings.openTime || "18:00", data.settings.closeTime || "22:00", data.settings.slotInterval || 30);
+          setAllTimeSlots(slots);
+          setClosedDates(data.settings.closedDates || []);
+        }
+      })
+      .catch(() => {
+        setAllTimeSlots(generateTimeSlots("18:00", "22:00", 30));
+      });
+  }, []);
+
+  // Filter out past time slots when selected date is today
+  const today = new Date().toISOString().split("T")[0];
+  const filteredTimeSlots =
+    formData.date === today
+      ? allTimeSlots.filter((slot) => {
+          const slotMin = parseTimeSlot(slot);
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          return slotMin > nowMin;
+        })
+      : allTimeSlots;
+
+  // Check if selected date is a closed date
+  const closedDateEntry = formData.date ? closedDates.find((c) => c.date === formData.date) : null;
+  const isClosedDate = !!closedDateEntry;
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -64,10 +121,31 @@ export default function Reservation() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (validate()) {
+    setApiError("");
+    if (!validate()) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setApiError(data.error || "Something went wrong. Please try again.");
+        return;
+      }
+
       setSubmitted(true);
+    } catch {
+      setApiError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -80,6 +158,44 @@ export default function Reservation() {
         return next;
       });
     }
+    // Clear availability when date/time/guests change
+    if (["date", "time", "guests"].includes(field)) {
+      setAvailability(null);
+    }
+  };
+
+  // Availability check
+  const [availability, setAvailability] = useState<{
+    available: boolean;
+    availableTables: number;
+    totalTables: number;
+  } | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  // Auto-check availability when date, time, and guests are all set
+  const checkAvailability = async (date: string, time: string, guests: string) => {
+    if (!date || !time) return;
+    setCheckingAvailability(true);
+    try {
+      const res = await fetch(`/api/availability?date=${date}&time=${time}&guests=${guests}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailability(data);
+      }
+    } catch {
+      // Silently fail — availability check is a nice-to-have
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  // Trigger availability check when date/time/guests change
+  const handleFieldWithAvailability = (field: keyof FormData, value: string) => {
+    handleChange(field, value);
+    const next = { ...formData, [field]: value };
+    if (next.date && next.time) {
+      checkAvailability(next.date, next.time, next.guests);
+    }
   };
 
   const inputClass = (field: string) =>
@@ -87,8 +203,7 @@ export default function Reservation() {
       errors[field] ? "border-red-500/70" : "border-surface-border"
     } px-4 py-3 text-foreground placeholder-foreground/30 focus:border-gold focus:outline-none transition-colors duration-300`;
 
-  // Today's date for min attribute
-  const today = new Date().toISOString().split("T")[0];
+  // today already defined above for slot filtering
 
   if (submitted) {
     return (
@@ -99,24 +214,24 @@ export default function Reservation() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="font-[family-name:var(--font-display)] text-4xl text-gold">
-            Reservation Confirmed
-          </h2>
+          <h2 className="font-[family-name:var(--font-display)] text-4xl text-gold">Reservation Confirmed</h2>
           <p className="text-foreground/60 text-lg">
-            Thank you, {formData.name}. We&apos;ve reserved your table for{" "}
-            <span className="text-gold">{formData.guests} guests</span> on{" "}
-            <span className="text-gold">{formData.date}</span> at{" "}
-            <span className="text-gold">{formData.time}</span>.
+            Thank you, {formData.name}. We&apos;ve reserved your table for <span className="text-gold">{formData.guests} guests</span> on{" "}
+            <span className="text-gold">{formData.date}</span> at <span className="text-gold">{formData.time}</span>.
           </p>
-          <p className="text-foreground/40 text-sm">
-            A confirmation has been sent to {formData.email}. We look forward to welcoming you.
-          </p>
+          <p className="text-foreground/40 text-sm">A confirmation has been sent to {formData.email}. We look forward to welcoming you.</p>
           <button
             onClick={() => {
               setSubmitted(false);
               setFormData({
-                name: "", email: "", phone: "", date: "",
-                time: "", guests: "2", occasion: "None", requests: "",
+                name: "",
+                email: "",
+                phone: "",
+                date: "",
+                time: "",
+                guests: "2",
+                occasion: "None",
+                requests: "",
               });
             }}
             className="mt-4 px-8 py-3 border border-gold text-gold tracking-widest uppercase text-sm hover:bg-gold hover:text-background transition-all duration-300"
@@ -129,35 +244,22 @@ export default function Reservation() {
   }
 
   return (
-    <section
-      id="reservation"
-      ref={sectionRef}
-      className="py-24 md:py-32 px-6 lg:px-8 bg-surface"
-    >
+    <section id="reservation" ref={sectionRef} className="py-24 md:py-32 px-6 lg:px-8 bg-surface">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="text-gold text-sm tracking-[0.3em] uppercase">
-            Book Your Experience
-          </span>
-          <h2 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl mt-2 mb-4">
-            Reserve a Table
-          </h2>
+          <span className="text-gold text-sm tracking-[0.3em] uppercase">Book Your Experience</span>
+          <h2 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl mt-2 mb-4">Reserve a Table</h2>
           <div className="gold-divider max-w-xs mx-auto">
             <span className="text-gold text-lg">✦</span>
           </div>
           <p className="text-foreground/50 mt-6 max-w-xl mx-auto">
-            Secure your evening at Percentco. For parties of 8 or more, please
-            contact us directly.
+            Secure your evening at Percentco. For parties of 8 or more, please contact us directly.
           </p>
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="grid md:grid-cols-2 gap-6"
-        >
+        <form onSubmit={handleSubmit} noValidate className="grid md:grid-cols-2 gap-6">
           {/* Name */}
           <div>
             <label htmlFor="res-name" className="block text-sm text-foreground/50 mb-2 tracking-wider uppercase">
@@ -171,9 +273,7 @@ export default function Reservation() {
               onChange={(e) => handleChange("name", e.target.value)}
               className={inputClass("name")}
             />
-            {errors.name && (
-              <p className="text-red-400 text-xs mt-1">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
           </div>
 
           {/* Email */}
@@ -189,9 +289,7 @@ export default function Reservation() {
               onChange={(e) => handleChange("email", e.target.value)}
               className={inputClass("email")}
             />
-            {errors.email && (
-              <p className="text-red-400 text-xs mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
           </div>
 
           {/* Phone */}
@@ -207,9 +305,7 @@ export default function Reservation() {
               onChange={(e) => handleChange("phone", e.target.value)}
               className={inputClass("phone")}
             />
-            {errors.phone && (
-              <p className="text-red-400 text-xs mt-1">{errors.phone}</p>
-            )}
+            {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           {/* Date */}
@@ -222,11 +318,21 @@ export default function Reservation() {
               type="date"
               min={today}
               value={formData.date}
-              onChange={(e) => handleChange("date", e.target.value)}
+              onChange={(e) => handleFieldWithAvailability("date", e.target.value)}
               className={`${inputClass("date")} [color-scheme:dark]`}
             />
-            {errors.date && (
-              <p className="text-red-400 text-xs mt-1">{errors.date}</p>
+            {errors.date && <p className="text-red-400 text-xs mt-1">{errors.date}</p>}
+            {isClosedDate && (
+              <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                  />
+                </svg>
+                Restaurant is closed on this date — {closedDateEntry!.reason}
+              </p>
             )}
           </div>
 
@@ -238,19 +344,17 @@ export default function Reservation() {
             <select
               id="res-time"
               value={formData.time}
-              onChange={(e) => handleChange("time", e.target.value)}
+              onChange={(e) => handleFieldWithAvailability("time", e.target.value)}
               className={inputClass("time")}
             >
-              <option value="">Select a time</option>
-              {timeSlots.map((t) => (
+              <option value="">{formData.date === today && filteredTimeSlots.length === 0 ? "No slots available today" : "Select a time"}</option>
+              {filteredTimeSlots.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
               ))}
             </select>
-            {errors.time && (
-              <p className="text-red-400 text-xs mt-1">{errors.time}</p>
-            )}
+            {errors.time && <p className="text-red-400 text-xs mt-1">{errors.time}</p>}
           </div>
 
           {/* Guests */}
@@ -261,7 +365,7 @@ export default function Reservation() {
             <select
               id="res-guests"
               value={formData.guests}
-              onChange={(e) => handleChange("guests", e.target.value)}
+              onChange={(e) => handleFieldWithAvailability("guests", e.target.value)}
               className={inputClass("guests")}
             >
               {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
@@ -271,6 +375,28 @@ export default function Reservation() {
               ))}
             </select>
           </div>
+
+          {/* Availability Indicator */}
+          {(availability || checkingAvailability) && formData.date && formData.time && (
+            <div className="md:col-span-2">
+              {checkingAvailability ? (
+                <div className="flex items-center gap-2 text-foreground/40 text-sm">
+                  <span className="w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
+                  Checking availability...
+                </div>
+              ) : availability?.available ? (
+                <div className="flex items-center gap-2 text-green-400 text-sm">
+                  <span className="w-2 h-2 rounded-full bg-green-400" />
+                  {availability.availableTables} of {availability.totalTables} tables available
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-red-400 text-sm">
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  No tables available for this slot — please try a different date or time
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Occasion */}
           <div className="md:col-span-2">
@@ -308,17 +434,18 @@ export default function Reservation() {
 
           {/* Submit */}
           <div className="md:col-span-2 text-center mt-4">
+            {apiError && <div className="mb-4 p-3 bg-red-900/20 border border-red-500/30 text-red-400 text-sm">{apiError}</div>}
             <button
               type="submit"
               id="reserve-submit"
-              className="group relative px-12 py-4 bg-gold text-background text-sm tracking-widest uppercase font-semibold overflow-hidden transition-all duration-500 hover:shadow-lg hover:shadow-gold/20"
+              disabled={submitting || isClosedDate}
+              className="group relative px-12 py-4 bg-gold text-background text-sm tracking-widest uppercase font-semibold overflow-hidden transition-all duration-500 hover:shadow-lg hover:shadow-gold/20 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="relative z-10">Reserve Now</span>
+              <span className="relative z-10">{submitting ? "Reserving..." : "Reserve Now"}</span>
               <span className="absolute inset-0 bg-gold-light scale-x-0 origin-left transition-transform duration-500 group-hover:scale-x-100" />
             </button>
             <p className="text-foreground/30 text-xs mt-4">
-              By reserving, you agree to our cancellation policy. Please arrive
-              15 minutes before your reservation.
+              By reserving, you agree to our cancellation policy. Please arrive 15 minutes before your reservation.
             </p>
           </div>
         </form>

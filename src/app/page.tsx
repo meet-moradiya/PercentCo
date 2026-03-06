@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import ClosureNotice from "@/components/ClosureNotice";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import Menu from "@/components/Menu";
@@ -12,6 +13,7 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <>
+      <ClosureNotice />
       <Navbar />
       <main>
         <Hero />

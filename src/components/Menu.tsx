@@ -1,130 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 type Category = "starters" | "mains" | "desserts" | "drinks";
 
 interface MenuItem {
+  _id?: string;
   name: string;
   description: string;
   price: string;
   tag?: string;
+  category?: Category;
 }
 
-const menuData: Record<Category, MenuItem[]> = {
+// Fallback data used when API is unavailable (e.g., no MongoDB configured yet)
+const fallbackMenuData: Record<Category, MenuItem[]> = {
   starters: [
-    {
-      name: "Truffle Burrata",
-      description: "Fresh burrata, black truffle shavings, aged balsamic, micro basil",
-      price: "$24",
-      tag: "Chef's Pick",
-    },
-    {
-      name: "Tuna Tartare",
-      description: "Yellowfin tuna, avocado mousse, sesame tuile, citrus ponzu",
-      price: "$28",
-    },
-    {
-      name: "Lobster Bisque",
-      description: "Velvety lobster broth, cognac cream, chive oil, gruyère crouton",
-      price: "$22",
-    },
-    {
-      name: "Foie Gras Torchon",
-      description: "Duck foie gras, fig compote, brioche toast, fleur de sel",
-      price: "$32",
-    },
-    {
-      name: "Carpaccio di Manzo",
-      description: "Wagyu beef carpaccio, arugula, parmesan, truffle dressing",
-      price: "$26",
-    },
-    {
-      name: "Ceviche Nikkei",
-      description: "Sea bass, tiger milk, aji amarillo, crispy shallots",
-      price: "$25",
-    },
+    { name: "Truffle Burrata", description: "Fresh burrata, black truffle shavings, aged balsamic, micro basil", price: "$24", tag: "Chef's Pick" },
+    { name: "Tuna Tartare", description: "Yellowfin tuna, avocado mousse, sesame tuile, citrus ponzu", price: "$28" },
+    { name: "Lobster Bisque", description: "Velvety lobster broth, cognac cream, chive oil, gruyère crouton", price: "$22" },
+    { name: "Foie Gras Torchon", description: "Duck foie gras, fig compote, brioche toast, fleur de sel", price: "$32" },
+    { name: "Carpaccio di Manzo", description: "Wagyu beef carpaccio, arugula, parmesan, truffle dressing", price: "$26" },
+    { name: "Ceviche Nikkei", description: "Sea bass, tiger milk, aji amarillo, crispy shallots", price: "$25" },
   ],
   mains: [
-    {
-      name: "Wagyu Ribeye",
-      description: "A5 Japanese wagyu, bone marrow butter, charred broccolini, red wine jus",
-      price: "$85",
-      tag: "Signature",
-    },
-    {
-      name: "Pan-Seared Scallops",
-      description: "Hokkaido scallops, cauliflower purée, brown butter, capers",
-      price: "$48",
-    },
-    {
-      name: "Duck Confit",
-      description: "Slow-cooked duck leg, cherry gastrique, roasted root vegetables",
-      price: "$42",
-    },
-    {
-      name: "Chilean Sea Bass",
-      description: "Miso-glazed sea bass, bok choy, shiitake dashi, ginger oil",
-      price: "$52",
-      tag: "Popular",
-    },
-    {
-      name: "Rack of Lamb",
-      description: "Herb-crusted lamb, pistachio crust, mint gremolata, fondant potato",
-      price: "$58",
-    },
-    {
-      name: "Wild Mushroom Risotto",
-      description: "Arborio rice, porcini, chanterelle, truffle oil, aged parmesan",
-      price: "$36",
-    },
+    { name: "Wagyu Ribeye", description: "A5 Japanese wagyu, bone marrow butter, charred broccolini, red wine jus", price: "$85", tag: "Signature" },
+    { name: "Pan-Seared Scallops", description: "Hokkaido scallops, cauliflower purée, brown butter, capers", price: "$48" },
+    { name: "Duck Confit", description: "Slow-cooked duck leg, cherry gastrique, roasted root vegetables", price: "$42" },
+    { name: "Chilean Sea Bass", description: "Miso-glazed sea bass, bok choy, shiitake dashi, ginger oil", price: "$52", tag: "Popular" },
+    { name: "Rack of Lamb", description: "Herb-crusted lamb, pistachio crust, mint gremolata, fondant potato", price: "$58" },
+    { name: "Wild Mushroom Risotto", description: "Arborio rice, porcini, chanterelle, truffle oil, aged parmesan", price: "$36" },
   ],
   desserts: [
-    {
-      name: "Chocolate Fondant",
-      description: "Valrhona dark chocolate, molten center, vanilla bean ice cream, gold leaf",
-      price: "$18",
-      tag: "Must Try",
-    },
-    {
-      name: "Crème Brûlée",
-      description: "Madagascar vanilla, caramelized sugar, fresh berries",
-      price: "$16",
-    },
-    {
-      name: "Tiramisu Deconstructed",
-      description: "Espresso-soaked savoiardi, mascarpone mousse, cocoa dust",
-      price: "$17",
-    },
-    {
-      name: "Tarte Tatin",
-      description: "Caramelized apple, puff pastry, calvados cream, cinnamon",
-      price: "$18",
-    },
+    { name: "Chocolate Fondant", description: "Valrhona dark chocolate, molten center, vanilla bean ice cream, gold leaf", price: "$18", tag: "Must Try" },
+    { name: "Crème Brûlée", description: "Madagascar vanilla, caramelized sugar, fresh berries", price: "$16" },
+    { name: "Tiramisu Deconstructed", description: "Espresso-soaked savoiardi, mascarpone mousse, cocoa dust", price: "$17" },
+    { name: "Tarte Tatin", description: "Caramelized apple, puff pastry, calvados cream, cinnamon", price: "$18" },
   ],
   drinks: [
-    {
-      name: "The Golden Hour",
-      description: "Champagne, elderflower liqueur, gold flakes, citrus zest",
-      price: "$22",
-      tag: "Signature",
-    },
-    {
-      name: "Smoky Old Fashioned",
-      description: "Japanese whisky, demerara, Angostura, smoked oak",
-      price: "$20",
-    },
-    {
-      name: "Espresso Martini",
-      description: "Premium vodka, fresh espresso, coffee liqueur, vanilla",
-      price: "$18",
-    },
-    {
-      name: "Sommelier's Selection",
-      description: "Curated wine pairing — ask your server for today's selection",
-      price: "$35",
-    },
+    { name: "The Golden Hour", description: "Champagne, elderflower liqueur, gold flakes, citrus zest", price: "$22", tag: "Signature" },
+    { name: "Smoky Old Fashioned", description: "Japanese whisky, demerara, Angostura, smoked oak", price: "$20" },
+    { name: "Espresso Martini", description: "Premium vodka, fresh espresso, coffee liqueur, vanilla", price: "$18" },
+    { name: "Sommelier's Selection", description: "Curated wine pairing — ask your server for today's selection", price: "$35" },
   ],
 };
 
@@ -138,6 +56,37 @@ const categories: { key: Category; label: string }[] = [
 export default function Menu() {
   const [active, setActive] = useState<Category>("starters");
   const sectionRef = useScrollReveal();
+  const [menuData, setMenuData] = useState<Record<Category, MenuItem[]>>(fallbackMenuData);
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch("/api/menu");
+        if (!res.ok) return;
+        const data = await res.json();
+        const items: MenuItem[] = data.items || [];
+
+        if (items.length > 0) {
+          const grouped: Record<Category, MenuItem[]> = {
+            starters: [],
+            mains: [],
+            desserts: [],
+            drinks: [],
+          };
+          for (const item of items) {
+            const cat = (item.category || "starters") as Category;
+            if (grouped[cat]) grouped[cat].push(item);
+          }
+          // Only use API data if it has entries
+          const hasData = Object.values(grouped).some((arr) => arr.length > 0);
+          if (hasData) setMenuData(grouped);
+        }
+      } catch {
+        // Silently fall back to hardcoded data
+      }
+    };
+    fetchMenu();
+  }, []);
 
   return (
     <section
@@ -151,7 +100,7 @@ export default function Menu() {
           <span className="text-gold text-sm tracking-[0.3em] uppercase">
             Culinary Excellence
           </span>
-          <h2 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl mt-2 mb-4">
+          <h2 className="font-display text-4xl md:text-5xl mt-2 mb-4">
             Our Menu
           </h2>
           <div className="gold-divider max-w-xs mx-auto">
@@ -181,14 +130,14 @@ export default function Menu() {
         <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
           {menuData[active].map((item, i) => (
             <div
-              key={item.name}
+              key={item._id || item.name}
               className="group border-b border-surface-border pb-6 hover:border-gold/30 transition-colors duration-300"
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-[family-name:var(--font-display)] text-xl group-hover:text-gold transition-colors duration-300">
+                    <h3 className="font-display text-xl group-hover:text-gold transition-colors duration-300">
                       {item.name}
                     </h3>
                     {item.tag && (
@@ -201,7 +150,7 @@ export default function Menu() {
                     {item.description}
                   </p>
                 </div>
-                <span className="font-[family-name:var(--font-display)] text-xl text-gold shrink-0">
+                <span className="font-display text-xl text-gold shrink-0">
                   {item.price}
                 </span>
               </div>
