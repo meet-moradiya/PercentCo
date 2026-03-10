@@ -207,22 +207,42 @@ export const generateTablePdf = async (
   doc.line(40, sepY, pw - 40, sepY);
 
   // ── Custom message (canvas-rendered for multi-language support) ──
+  // if (message && message.trim()) {
+  //   const textColor = theme === "dark" ? "#d4d4d4" : "#333333";
+  //   const textImgDataUrl = renderTextAsImage(message, 600, textColor, 28);
+
+  //   const img = new Image();
+  //   await new Promise<void>((resolve) => {
+  //     img.onload = () => resolve();
+  //     img.src = textImgDataUrl;
+  //   });
+
+  //   const imgAspect = img.width / img.height;
+  //   const imgWidthMm = 140;
+  //   const imgHeightMm = imgWidthMm / imgAspect;
+  //   const msgY = sepY + 6;
+
+  //   doc.addImage(textImgDataUrl, "PNG", pw / 2 - imgWidthMm / 2, msgY, imgWidthMm, imgHeightMm);
+  // }
+
+  // ── Custom message (vector text) ──
   if (message && message.trim()) {
-    const textColor = theme === "dark" ? "#d4d4d4" : "#333333";
-    const textImgDataUrl = renderTextAsImage(message, 600, textColor, 28);
+    const msgY = sepY + 14;
 
-    const img = new Image();
-    await new Promise<void>((resolve) => {
-      img.onload = () => resolve();
-      img.src = textImgDataUrl;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(16);
+
+    const textColor: [number, number, number] =
+      theme === "dark"
+        ? [212, 212, 212]
+        : [50, 50, 50];
+
+    doc.setTextColor(...textColor);
+
+    doc.text(message, pw / 2, msgY, {
+      align: "center",
+      maxWidth: 140,
     });
-
-    const imgAspect = img.width / img.height;
-    const imgWidthMm = 140;
-    const imgHeightMm = imgWidthMm / imgAspect;
-    const msgY = sepY + 6;
-
-    doc.addImage(textImgDataUrl, "PNG", pw / 2 - imgWidthMm / 2, msgY, imgWidthMm, imgHeightMm);
   }
 
   // // ── URL at bottom ──

@@ -49,12 +49,17 @@ export default function AdminDashboard() {
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
 
-      const [resRes, menuRes, settingsRes, codesRes] = await Promise.all([fetch("/api/reservations?limit=100"), fetch("/api/menu"), fetch("/api/settings"), fetch("/api/table-codes")]);
+      const [resRes, menuRes, settingsRes, codesRes] = await Promise.all([
+        fetch("/api/reservations?limit=100"),
+        fetch("/api/menu"),
+        fetch("/api/settings"),
+        fetch("/api/table-codes"),
+      ]);
 
       const resData = await resRes.json();
       const menuData = await menuRes.json();
       const settingsData = await settingsRes.json();
-      const codesData = await codesRes.ok ? await codesRes.json() : { codes: [] };
+      const codesData = (await codesRes.ok) ? await codesRes.json() : { codes: [] };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const reservations: any[] = resData.reservations || [];
@@ -282,7 +287,7 @@ export default function AdminDashboard() {
         </div>
         <button
           onClick={openWalkin}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gold text-background text-sm font-semibold tracking-widest uppercase hover:bg-gold-light transition-colors"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gold text-background text-sm font-semibold tracking-widest uppercase hover:bg-gold-light transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path
@@ -311,7 +316,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Confirmed", value: stats?.confirmedReservations || 0, color: "text-green-400" },
           { label: "Completed Today", value: stats?.completedToday || 0, color: "text-muted" },
@@ -327,9 +332,9 @@ export default function AdminDashboard() {
 
       {/* Live Floor View */}
       <div className="bg-surface border border-surface-border mb-8 transition-colors duration-300">
-        <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-surface-border flex gap-6 flex-col md:flex-row items-center justify-between">
           <h2 className="text-foreground font-medium">Today&apos;s Table Floor</h2>
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center flex-wrap justify-center gap-4 text-xs">
             {[
               { label: "Available", color: "bg-green-400" },
               { label: "Reserved", color: "bg-gold" },

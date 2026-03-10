@@ -106,7 +106,7 @@ export default function InsightsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex overflow-x-auto border-b border-surface-border mb-8 scrollbar-hide">
+      <div className="flex overflow-x-auto no-scrollbar border-b border-surface-border mb-8">
         {tabs.map((t) => (
           <button
             key={t.id}

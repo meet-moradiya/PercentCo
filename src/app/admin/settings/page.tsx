@@ -381,7 +381,7 @@ export default function AdminSettings() {
         </button>
       </div>
       {/* Tabs */}
-      <div className="flex border-b border-surface-border mb-6">
+      <div className="flex border-b border-surface-border mb-6 overflow-x-auto no-scrollbar">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -391,7 +391,7 @@ export default function AdminSettings() {
             }`}
           >
             <span className="mr-1.5">{tabIcons[t.key]}</span>
-            <span>{t.label}</span>
+            <span className="text-nowrap">{t.label}</span>
           </button>
         ))}
       </div>
@@ -833,7 +833,7 @@ export default function AdminSettings() {
             <div className="space-y-3">
               {events.map((ev) => (
                 <div key={ev.id} className={`bg-surface border border-surface-border p-5 transition-all ${!ev.isActive ? "opacity-50" : ""}`}>
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
                         <h3 className="text-foreground font-semibold text-lg">{ev.title}</h3>

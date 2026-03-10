@@ -214,7 +214,7 @@ export default function Reservation() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="font-[family-name:var(--font-display)] text-4xl text-gold">Reservation Confirmed</h2>
+          <h2 className="font-display text-4xl text-gold">Reservation Confirmed</h2>
           <p className="text-foreground/60 text-lg">
             Thank you, {formData.name}. We&apos;ve reserved your table for <span className="text-gold">{formData.guests} guests</span> on{" "}
             <span className="text-gold">{formData.date}</span> at <span className="text-gold">{formData.time}</span>.
@@ -249,7 +249,7 @@ export default function Reservation() {
         {/* Header */}
         <div className="text-center mb-16">
           <span className="text-gold text-sm tracking-[0.3em] uppercase">Book Your Experience</span>
-          <h2 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl mt-2 mb-4">Reserve a Table</h2>
+          <h2 className="font-display text-4xl md:text-5xl mt-2 mb-4">Reserve a Table</h2>
           <div className="gold-divider max-w-xs mx-auto">
             <span className="text-gold text-lg">✦</span>
           </div>
@@ -319,7 +319,7 @@ export default function Reservation() {
               min={today}
               value={formData.date}
               onChange={(e) => handleFieldWithAvailability("date", e.target.value)}
-              className={`${inputClass("date")} [color-scheme:dark]`}
+              className={`${inputClass("date")} scheme-dark`}
             />
             {errors.date && <p className="text-red-400 text-xs mt-1">{errors.date}</p>}
             {isClosedDate && (
