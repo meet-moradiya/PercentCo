@@ -7,6 +7,7 @@ import FeaturedDishes from "@/components/FeaturedDishes";
 import Gallery from "@/components/Gallery";
 import Testimonials from "@/components/Testimonials";
 import Reservation from "@/components/Reservation";
+import Contact from "@/components/Contact";
 import Location from "@/components/Location";
 import Footer from "@/components/Footer";
 
@@ -23,6 +24,7 @@ export default function Home() {
         <Gallery />
         <Testimonials />
         <Reservation />
+        <Contact />
         <Location />
       </main>
       <Footer />

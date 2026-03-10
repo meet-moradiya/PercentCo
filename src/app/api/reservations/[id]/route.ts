@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Reservation from "@/models/Reservation";
+import TableCode from "@/models/TableCode";
 import { verifyToken } from "@/lib/auth";
+import { createAndSendTableCode } from "@/lib/email";
 
 function getAdminToken(req: NextRequest) {
   const token = req.cookies.get("admin-token")?.value;
@@ -24,7 +26,12 @@ export async function PATCH(
     await connectDB();
     const { id } = await params;
     const body = await req.json();
-    const { status, tableNumber } = body;
+    const { status, tableNumber, date, time } = body;
+
+    const reservation = await Reservation.findById(id);
+    if (!reservation) {
+      return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
+    }
 
     // Build update object
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,44 +45,74 @@ export async function PATCH(
 
       // Auto-clear table when completing, cancelling, or marking no-show
       if (["completed", "cancelled", "no-show"].includes(status)) {
+        // Deactivate OTP codes for this table — table is now free
+        if (reservation.tableNumber) {
+          await TableCode.updateMany(
+            { tableNumber: reservation.tableNumber, isActive: true },
+            { isActive: false }
+          );
+        }
         update.tableNumber = null;
       }
     }
 
+    if (date !== undefined) update.date = date;
+    if (time !== undefined) update.time = time;
+
+    const newTableNumber = tableNumber !== undefined ? tableNumber : (update.tableNumber !== undefined ? update.tableNumber : reservation.tableNumber);
     if (tableNumber !== undefined) {
       update.tableNumber = tableNumber;
+    }
 
-      // If assigning a table, check it's not already booked for this slot
-      if (tableNumber !== null) {
-        const reservation = await Reservation.findById(id);
-        if (!reservation) {
-          return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
-        }
+    // If assigning or keeping a table while changing date/time, check it's not already booked for this slot
+    if (newTableNumber !== null && (date !== undefined || time !== undefined || tableNumber !== undefined)) {
+      const checkDate = date !== undefined ? date : reservation.date;
+      const checkTime = time !== undefined ? time : reservation.time;
 
-        const conflict = await Reservation.findOne({
-          _id: { $ne: id },
-          date: reservation.date,
-          time: reservation.time,
-          tableNumber,
-          status: { $in: ["confirmed", "seated"] },
-        });
+      const conflict = await Reservation.findOne({
+        _id: { $ne: id },
+        date: checkDate,
+        time: checkTime,
+        tableNumber: newTableNumber,
+        status: { $in: ["confirmed", "seated"] },
+      });
 
-        if (conflict) {
-          return NextResponse.json(
-            { error: `Table ${tableNumber} is already booked for this time slot` },
-            { status: 409 }
-          );
-        }
+      if (conflict) {
+        return NextResponse.json(
+          { error: `Table ${newTableNumber} is already booked for this time slot` },
+          { status: 409 }
+        );
       }
     }
 
-    const reservation = await Reservation.findByIdAndUpdate(id, update, { new: true });
+    const updatedReservation = await Reservation.findByIdAndUpdate(id, update, { new: true });
 
-    if (!reservation) {
+    if (!updatedReservation) {
       return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, reservation });
+    // When status changes to "seated" and table is assigned, generate OTP and send email
+    let orderCode: string | undefined;
+    const finalStatus = update.status || reservation.status;
+    const finalTable = updatedReservation.tableNumber;
+    if (finalStatus === "seated" && finalTable && updatedReservation.email) {
+      try {
+        orderCode = await createAndSendTableCode(
+          finalTable,
+          updatedReservation.email,
+          updatedReservation.name
+        );
+      } catch (emailErr) {
+        console.error("Failed to send OTP email:", emailErr);
+        // Don't block the status update, just log the error
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      reservation: updatedReservation,
+      ...(orderCode ? { orderCode } : {}),
+    });
   } catch (error) {
     console.error("Update reservation error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

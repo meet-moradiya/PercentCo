@@ -9,6 +9,7 @@ interface TableInfo {
   status: "available" | "reserved" | "occupied" | "pending";
   reservation?: { name: string; time: string; guests: number };
   nextBooking?: { name: string; time: string; guests: number; minutesUntil: number };
+  orderCode?: string;
 }
 
 interface Stats {
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [showWalkin, setShowWalkin] = useState(false);
   const [walkinName, setWalkinName] = useState("");
   const [walkinPhone, setWalkinPhone] = useState("");
+  const [walkinEmail, setWalkinEmail] = useState("");
   const [walkinGuests, setWalkinGuests] = useState(2);
   const [walkinTable, setWalkinTable] = useState<number | null>(null);
   const [walkinSaving, setWalkinSaving] = useState(false);
@@ -47,11 +49,12 @@ export default function AdminDashboard() {
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
 
-      const [resRes, menuRes, settingsRes] = await Promise.all([fetch("/api/reservations?limit=100"), fetch("/api/menu"), fetch("/api/settings")]);
+      const [resRes, menuRes, settingsRes, codesRes] = await Promise.all([fetch("/api/reservations?limit=100"), fetch("/api/menu"), fetch("/api/settings"), fetch("/api/table-codes")]);
 
       const resData = await resRes.json();
       const menuData = await menuRes.json();
       const settingsData = await settingsRes.json();
+      const codesData = await codesRes.ok ? await codesRes.json() : { codes: [] };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const reservations: any[] = resData.reservations || [];
@@ -107,10 +110,14 @@ export default function AdminDashboard() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const seatedRes = tableRes.find((r: any) => r.status === "seated");
           if (seatedRes) {
+            // Find OTP code for this table
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const tableCode = (codesData.codes || []).find((c: any) => c.tableNumber === t.number);
             return {
               ...t,
               status: "occupied" as const,
               reservation: { name: seatedRes.name, time: seatedRes.time, guests: seatedRes.guests },
+              orderCode: tableCode?.code,
             };
           }
 
@@ -227,6 +234,7 @@ export default function AdminDashboard() {
     setShowWalkin(true);
     setWalkinName("");
     setWalkinPhone("");
+    setWalkinEmail("");
     setWalkinGuests(2);
     setWalkinTable(null);
     setWalkinError("");
@@ -243,6 +251,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           name: walkinName || "Walk-in Guest",
           phone: walkinPhone,
+          email: walkinEmail,
           guests: walkinGuests,
           tableNumber: walkinTable,
         }),
@@ -353,6 +362,12 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 )}
+                {table.status === "occupied" && table.orderCode && (
+                  <div className="mt-1.5 bg-gold/10 border border-gold/20 rounded px-2 py-1">
+                    <p className="text-gold/70 text-[8px] uppercase tracking-wider">OTP Code</p>
+                    <p className="text-gold font-bold text-sm tracking-widest">{table.orderCode}</p>
+                  </div>
+                )}
                 {table.status === "available" && table.nextBooking && (
                   <div className="mt-2 border-t border-surface-border pt-2">
                     <p className="text-gold/70 text-[9px] uppercase tracking-wider">Next</p>
@@ -419,6 +434,19 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
+                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Email *</label>
+                  <input
+                    type="email"
+                    value={walkinEmail}
+                    onChange={(e) => setWalkinEmail(e.target.value)}
+                    placeholder="customer@email.com"
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground placeholder-muted/50 focus:border-gold focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Phone (optional)</label>
                   <input
                     type="tel"
@@ -428,26 +456,24 @@ export default function AdminDashboard() {
                     className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground placeholder-muted/50 focus:border-gold focus:outline-none transition-colors"
                   />
                 </div>
+                <div>
+                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Number of Guests *</label>
+                  <select
+                    value={walkinGuests}
+                    onChange={(e) => {
+                      setWalkinGuests(Number(e.target.value));
+                      setWalkinTable(null);
+                    }}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n} {n === 1 ? "Guest" : "Guests"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-
-              <div>
-                <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Number of Guests *</label>
-                <select
-                  value={walkinGuests}
-                  onChange={(e) => {
-                    setWalkinGuests(Number(e.target.value));
-                    setWalkinTable(null);
-                  }}
-                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n} {n === 1 ? "Guest" : "Guests"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div>
                 <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Select Table *</label>
                 {availableForWalkin.length === 0 ? (

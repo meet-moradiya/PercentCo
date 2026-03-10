@@ -4,6 +4,7 @@ import Reservation from "@/models/Reservation";
 import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
 import { parseTime, windowsOverlap, BUFFER_MINUTES } from "@/lib/timeUtils";
+import { createAndSendTableCode } from "@/lib/email";
 
 // POST — Admin: create a walk-in reservation (seated immediately)
 // Uses duration-aware overlap to prevent seating at a table that has an upcoming booking
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const { name, phone, guests, tableNumber } = await req.json();
+    const { name, phone, email, guests, tableNumber } = await req.json();
 
     if (!guests || !tableNumber) {
       return NextResponse.json(
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     const reservation = await Reservation.create({
       name: name || "Walk-in Guest",
-      email: "walkin@percentco.com",
+      email: email?.trim().toLowerCase() || "walkin@percentco.com",
       phone: phone || "—",
       date: today,
       time: timeStr,
@@ -113,7 +114,25 @@ export async function POST(req: NextRequest) {
       tableNumber,
     });
 
-    return NextResponse.json({ reservation }, { status: 201 });
+    // Generate OTP and send to email
+    let orderCode: string | undefined;
+    const customerEmail = email?.trim().toLowerCase();
+    if (customerEmail) {
+      try {
+        orderCode = await createAndSendTableCode(
+          tableNumber,
+          customerEmail,
+          name || "Walk-in Guest"
+        );
+      } catch (emailErr) {
+        console.error("Failed to send OTP email for walk-in:", emailErr);
+      }
+    }
+
+    return NextResponse.json({
+      reservation,
+      ...(orderCode ? { orderCode } : {}),
+    }, { status: 201 });
   } catch (error) {
     console.error("Walk-in error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

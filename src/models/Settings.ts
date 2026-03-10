@@ -31,6 +31,7 @@ export interface ISettings extends Document {
   slotInterval: number;
   closedDates: ClosedDate[];
   events: EventPromo[];
+  qrCustomText: string;
 }
 
 const TableConfigSchema = new Schema<TableConfig>(
@@ -74,6 +75,7 @@ const SettingsSchema = new Schema<ISettings>(
     slotInterval: { type: Number, default: 30, enum: [15, 30] },
     closedDates: { type: [ClosedDateSchema], default: [] },
     events: { type: [EventPromoSchema], default: [] },
+    qrCustomText: { type: String, default: "Scan to order from your table" },
   },
   { timestamps: true }
 );

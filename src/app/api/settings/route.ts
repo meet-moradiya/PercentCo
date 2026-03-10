@@ -31,6 +31,7 @@ export async function GET() {
         slotInterval: 30,
         closedDates: [],
         events: [],
+        qrCustomText: "Scan to order from your table",
       });
       settings = settings.toObject();
     }
@@ -52,7 +53,7 @@ export async function PUT(req: NextRequest) {
 
     await connectDB();
     const body = await req.json();
-    const { totalTables, tables, slotDuration, openTime, closeTime, slotInterval, closedDates, events } = body;
+    const { totalTables, tables, slotDuration, openTime, closeTime, slotInterval, closedDates, events, qrCustomText } = body;
 
     let settings = await Settings.findOne();
 
@@ -67,6 +68,7 @@ export async function PUT(req: NextRequest) {
         slotInterval: slotInterval || 30,
         closedDates: closedDates || [],
         events: events || [],
+        qrCustomText: qrCustomText || "Scan to order from your table",
       });
     } else {
       if (totalTables !== undefined) settings.totalTables = totalTables;
@@ -77,6 +79,7 @@ export async function PUT(req: NextRequest) {
       if (slotInterval !== undefined) settings.slotInterval = slotInterval;
       if (closedDates !== undefined) settings.closedDates = closedDates;
       if (events !== undefined) settings.events = events;
+      if (qrCustomText !== undefined) settings.qrCustomText = qrCustomText;
       await settings.save();
     }
 

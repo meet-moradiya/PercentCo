@@ -14,24 +14,8 @@ export async function POST(req: NextRequest) {
 
     let admin = await Admin.findOne({ email: email.toLowerCase().trim() });
 
-    // Auto-seed: if no admin exists at all, create one from env vars on first login
-    if (!admin) {
-      const adminCount = await Admin.countDocuments();
-      if (adminCount === 0) {
-        const seedEmail = (process.env.ADMIN_EMAIL || "admin@percentco.com").toLowerCase().trim();
-        const seedPassword = process.env.ADMIN_PASSWORD || "admin123";
-
-        const passwordHash = await hashPassword(seedPassword);
-        await Admin.create({
-          email: seedEmail,
-          passwordHash,
-          name: "Admin",
-        });
-
-        // Re-query in case the submitted email matches the seeded one
-        admin = await Admin.findOne({ email: email.toLowerCase().trim() });
-      }
-    }
+    // Auto-seed removed as requested by user.
+    // If no admin exists, user must run the /api/auth/seed endpoint directly.
 
     if (!admin) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

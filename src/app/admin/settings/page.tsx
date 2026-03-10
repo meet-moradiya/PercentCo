@@ -1,7 +1,9 @@
 "use client";
-
 import { useEffect, useState, useCallback } from "react";
-
+import { generateQrPng } from "@/lib/qr/generateQR";
+import { generateTablePdf, type PdfTheme } from "@/lib/qr/generatePdf";
+import { generatePdfZip } from "@/lib/qr/generatePdfZip";
+import JSZip from "jszip";
 interface TableConfig {
   number: number;
   capacity: number;
@@ -21,11 +23,13 @@ interface EventPromo {
   badgeColor: string;
   isActive: boolean;
 }
-
-type SettingsTab = "hours" | "tables" | "closures" | "events";
-
+type SettingsTab = "hours" | "tables" | "closures" | "events" | "admins";
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("hours");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [adminForm, setAdminForm] = useState({ name: "", email: "", password: "" });
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [tables, setTables] = useState<TableConfig[]>([]);
   const [slotDuration, setSlotDuration] = useState(90);
   const [openTime, setOpenTime] = useState("18:00");
@@ -40,6 +44,13 @@ export default function AdminSettings() {
   const [saved, setSaved] = useState(false);
   const [addCount, setAddCount] = useState(1);
   const [addCapacity, setAddCapacity] = useState(4);
+  // QR state
+  const [qrCustomText, setQrCustomText] = useState("Scan to order from your table");
+  const [qrSelected, setQrSelected] = useState<Set<number>>(new Set());
+  const [qrGenerating, setQrGenerating] = useState(false);
+  const [previewTable, setPreviewTable] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pdfTheme, setPdfTheme] = useState<PdfTheme>("dark");
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -52,7 +63,6 @@ export default function AdminSettings() {
     badgeColor: "gold",
     isActive: true,
   });
-
   const loadSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/settings");
@@ -65,6 +75,7 @@ export default function AdminSettings() {
         setSlotInterval(data.settings.slotInterval || 30);
         setClosedDates(data.settings.closedDates || []);
         setEvents(data.settings.events || []);
+        setQrCustomText(data.settings.qrCustomText || "Scan to order from your table");
       }
     } catch (error) {
       console.error("Load settings error:", error);
@@ -72,11 +83,53 @@ export default function AdminSettings() {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
-
+  const loadAdmins = useCallback(async () => {
+    setLoadingAdmins(true);
+    try {
+      const res = await fetch("/api/admins");
+      const data = await res.json();
+      if (data.admins) setAdmins(data.admins);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (activeTab === "admins" && admins.length === 0) loadAdmins();
+  }, [activeTab, loadAdmins, admins.length]);
+  const addAdmin = async () => {
+    if (!adminForm.name || !adminForm.email || !adminForm.password) return alert("Fill all fields");
+    try {
+      const res = await fetch("/api/admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(adminForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAdminForm({ name: "", email: "", password: "" });
+      loadAdmins();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+  const deleteAdmin = async (id: string, email: string) => {
+    if (!confirm(`Delete admin ${email}?`)) return;
+    try {
+      const res = await fetch(`/api/admins/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      loadAdmins();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
@@ -84,7 +137,17 @@ export default function AdminSettings() {
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalTables: tables.length, tables, slotDuration, openTime, closeTime, slotInterval, closedDates, events }),
+        body: JSON.stringify({
+          totalTables: tables.length,
+          tables,
+          slotDuration,
+          openTime,
+          closeTime,
+          slotInterval,
+          closedDates,
+          events,
+          qrCustomText,
+        }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -94,7 +157,6 @@ export default function AdminSettings() {
       setSaving(false);
     }
   };
-
   // Table helpers
   const addTables = () => {
     const maxNum = tables.length > 0 ? Math.max(...tables.map((t) => t.number)) : 0;
@@ -105,7 +167,6 @@ export default function AdminSettings() {
   const removeTable = (num: number) => setTables(tables.filter((t) => t.number !== num));
   const toggleTable = (num: number) => setTables(tables.map((t) => (t.number === num ? { ...t, isActive: !t.isActive } : t)));
   const updateCapacity = (num: number, cap: number) => setTables(tables.map((t) => (t.number === num ? { ...t, capacity: Math.max(1, cap) } : t)));
-
   // Closure helpers
   const addClosedDate = () => {
     if (!newClosedDate || closedDates.some((c) => c.date === newClosedDate)) return;
@@ -114,7 +175,69 @@ export default function AdminSettings() {
     setNewClosedReason("Holiday");
   };
   const removeClosedDate = (date: string) => setClosedDates(closedDates.filter((c) => c.date !== date));
-
+  // ========== QR CODE FUNCTIONS (Vector-based via svg2pdf.js) ==========
+  const getBaseUrl = () => (typeof window !== "undefined" ? window.location.origin : "");
+  const downloadSingleQrPng = async (tableNum: number) => {
+    const url = `${getBaseUrl()}/order?table=${tableNum}`;
+    const dataUrl = await generateQrPng(url, 1200);
+    const link = document.createElement("a");
+    link.download = `table-${tableNum}-qr.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+  const downloadSinglePdf = async (tableNum: number) => {
+    const blob = await generateTablePdf(tableNum, getBaseUrl(), qrCustomText, pdfTheme);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = `table-${tableNum}-qr.pdf`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  const downloadQrZip = async () => {
+    if (qrSelected.size === 0) return;
+    setQrGenerating(true);
+    try {
+      const zip = new JSZip();
+      for (const num of qrSelected) {
+        const url = `${getBaseUrl()}/order?table=${num}`;
+        const dataUrl = await generateQrPng(url, 1200);
+        zip.file(`table-${num}-qr.png`, dataUrl.split(",")[1], { base64: true });
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.download = "table-qr-codes.zip";
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      setQrGenerating(false);
+    }
+  };
+  const downloadPdfZip = async () => {
+    if (qrSelected.size === 0) return;
+    setQrGenerating(true);
+    try {
+      const blob = await generatePdfZip(Array.from(qrSelected), getBaseUrl(), qrCustomText, pdfTheme);
+      const link = document.createElement("a");
+      link.download = "table-qr-pdfs.zip";
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      setQrGenerating(false);
+    }
+  };
+  const openPdfPreview = async (tableNum: number) => {
+    setPreviewTable(tableNum);
+    const blob = await generateTablePdf(tableNum, getBaseUrl(), qrCustomText, pdfTheme);
+    setPreviewUrl(URL.createObjectURL(blob));
+  };
+  const closePdfPreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewTable(null);
+  };
   // Event helpers
   const openEventCreate = () => {
     setEditingEventId(null);
@@ -145,7 +268,6 @@ export default function AdminSettings() {
   };
   const deleteEvent = (id: string) => setEvents(events.filter((e) => e.id !== id));
   const toggleEvent = (id: string) => setEvents(events.map((e) => (e.id === id ? { ...e, isActive: !e.isActive } : e)));
-
   // Utilities
   const formatDate = (ds: string) => {
     const d = new Date(ds + "T00:00:00");
@@ -171,14 +293,12 @@ export default function AdminSettings() {
     }
     return slots;
   };
-
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
-
   const activeTables = tables.filter((t) => t.isActive);
   const totalCapacity = activeTables.reduce((s, t) => s + t.capacity, 0);
   const previewSlots = generatePreviewSlots();
@@ -193,7 +313,6 @@ export default function AdminSettings() {
     { key: "purple", label: "Purple", cls: "bg-purple-500/20 text-purple-400 border-purple-400/30" },
   ];
   const getBadgeCls = (c: string) => badgeColors.find((b) => b.key === c)?.cls || badgeColors[0].cls;
-
   const tabIcons: Record<SettingsTab, React.ReactNode> = {
     hours: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -228,15 +347,23 @@ export default function AdminSettings() {
         />
       </svg>
     ),
+    admins: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+        />
+      </svg>
+    ),
   };
-
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "hours", label: "Hours & Slots" },
     { key: "tables", label: "Tables" },
     { key: "closures", label: "Closures" },
     { key: "events", label: "Events & Promos" },
+    { key: "admins", label: "Admins" },
   ];
-
   return (
     <div>
       {/* Header */}
@@ -253,14 +380,13 @@ export default function AdminSettings() {
           {saving ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
         </button>
       </div>
-
       {/* Tabs */}
       <div className="flex border-b border-surface-border mb-6">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`px-5 py-3 text-sm tracking-wider uppercase border-b-2 transition-all -mb-[1px] flex items-center justify-center gap-2 ${
+            className={`px-5 py-3 text-sm tracking-wider uppercase border-b-2 transition-all -mb-px flex items-center justify-center gap-2 ${
               activeTab === t.key ? "border-gold text-gold" : "border-transparent text-muted hover:text-foreground"
             }`}
           >
@@ -269,7 +395,6 @@ export default function AdminSettings() {
           </button>
         ))}
       </div>
-
       {/* ========== HOURS TAB ========== */}
       {activeTab === "hours" && (
         <div className="space-y-6">
@@ -288,7 +413,6 @@ export default function AdminSettings() {
               <p className="text-xl font-bold text-blue-400 mt-1">{previewSlots.length}</p>
             </div>
           </div>
-
           {/* Hours Config */}
           <div className="bg-surface border border-surface-border p-6">
             <h2 className="text-foreground font-medium mb-4">Restaurant Hours</h2>
@@ -334,7 +458,6 @@ export default function AdminSettings() {
               </div>
             </div>
           </div>
-
           {/* Reservation Duration */}
           <div className="bg-surface border border-surface-border p-6">
             <h2 className="text-foreground font-medium mb-4">Reservation Duration</h2>
@@ -351,7 +474,6 @@ export default function AdminSettings() {
               <span className="text-muted text-xs">How long each table is reserved per booking</span>
             </div>
           </div>
-
           {/* Slot Preview */}
           <div className="bg-surface border border-surface-border p-6">
             <h2 className="text-foreground font-medium mb-3">Available Time Slots Preview</h2>
@@ -365,7 +487,6 @@ export default function AdminSettings() {
           </div>
         </div>
       )}
-
       {/* ========== TABLES TAB ========== */}
       {activeTab === "tables" && (
         <div className="space-y-6">
@@ -384,7 +505,6 @@ export default function AdminSettings() {
               <p className="text-2xl font-bold text-gold mt-1">{totalCapacity} seats</p>
             </div>
           </div>
-
           {/* Add Tables */}
           <div className="bg-surface border border-surface-border p-6">
             <h2 className="text-foreground font-medium mb-4">Add Tables</h2>
@@ -422,7 +542,72 @@ export default function AdminSettings() {
               </button>
             </div>
           </div>
-
+          {/* QR Codes Section */}
+          <div className="bg-surface border border-surface-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-foreground font-medium">QR Code Downloads</h2>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    if (qrSelected.size === activeTables.length) setQrSelected(new Set());
+                    else setQrSelected(new Set(activeTables.map((t) => t.number)));
+                  }}
+                  className="px-3 py-1.5 text-[10px] border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 tracking-wider uppercase transition-colors"
+                >
+                  {qrSelected.size === activeTables.length ? "Deselect All" : "Select All"}
+                </button>
+                {qrSelected.size > 0 && (
+                  <>
+                    <button
+                      onClick={downloadQrZip}
+                      disabled={qrGenerating}
+                      className="px-3 py-1.5 text-[10px] border border-gold text-gold tracking-wider uppercase hover:bg-gold hover:text-background transition-all disabled:opacity-50"
+                    >
+                      {qrGenerating ? "..." : `${qrSelected.size} PNG (ZIP)`}
+                    </button>
+                    <button
+                      onClick={downloadPdfZip}
+                      disabled={qrGenerating}
+                      className="px-3 py-1.5 text-[10px] bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    >
+                      {qrGenerating ? "..." : `${qrSelected.size} PDF (ZIP)`}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            {/* Custom text field */}
+            <div className="mb-4">
+              <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">
+                Custom Text (below QR on PDF) — supports all languages
+              </label>
+              <textarea
+                rows={2}
+                value={qrCustomText}
+                onChange={(e) => setQrCustomText(e.target.value)}
+                placeholder="Scan to order from your table..."
+                className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground placeholder-muted/50 focus:border-gold focus:outline-none resize-none transition-colors text-sm"
+              />
+            </div>
+            {/* Theme toggle */}
+            <div className="flex items-center gap-3">
+              <span className="text-muted text-xs tracking-wider uppercase">PDF Theme</span>
+              <div className="flex border border-surface-border">
+                <button
+                  onClick={() => setPdfTheme("dark")}
+                  className={`px-4 py-1.5 text-xs tracking-wider uppercase transition-all ${pdfTheme === "dark" ? "bg-gray-900 text-gold border-r border-surface-border" : "text-muted hover:text-foreground"}`}
+                >
+                  Dark
+                </button>
+                <button
+                  onClick={() => setPdfTheme("light")}
+                  className={`px-4 py-1.5 text-xs tracking-wider uppercase transition-all ${pdfTheme === "light" ? "bg-white text-gray-800 border-l border-surface-border" : "text-muted hover:text-foreground"}`}
+                >
+                  Light
+                </button>
+              </div>
+            </div>
+          </div>
           {/* Tables Grid */}
           <div className="bg-surface border border-surface-border">
             <div className="px-6 py-4 border-b border-surface-border">
@@ -432,49 +617,95 @@ export default function AdminSettings() {
               <div className="p-8 text-center text-muted">No tables configured. Add some above.</div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-4">
-                {tables.map((table) => (
-                  <div
-                    key={table.number}
-                    className={`border p-4 text-center transition-all ${table.isActive ? "border-surface-border bg-background" : "border-surface-border bg-background/50 opacity-50"}`}
-                  >
-                    <p className="text-foreground font-bold text-lg">T{table.number}</p>
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <button
-                        onClick={() => updateCapacity(table.number, table.capacity - 1)}
-                        className="w-6 h-6 text-xs border border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
-                      >
-                        −
-                      </button>
-                      <span className="text-gold text-sm w-12">{table.capacity} seats</span>
-                      <button
-                        onClick={() => updateCapacity(table.number, table.capacity + 1)}
-                        className="w-6 h-6 text-xs border border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
-                      >
-                        +
-                      </button>
+                {tables.map((table) => {
+                  const isQrSelected = qrSelected.has(table.number);
+                  return (
+                    <div
+                      key={table.number}
+                      className={`border p-4 text-center transition-all ${table.isActive ? (isQrSelected ? "border-gold bg-gold/5" : "border-surface-border bg-background") : "border-surface-border bg-background/50 opacity-50"}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-foreground font-bold text-lg">T{table.number}</p>
+                        {table.isActive && (
+                          <button
+                            onClick={() => {
+                              setQrSelected((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(table.number)) next.delete(table.number);
+                                else next.add(table.number);
+                                return next;
+                              });
+                            }}
+                            className={`w-5 h-5 border flex items-center justify-center transition-colors ${isQrSelected ? "border-gold bg-gold text-background" : "border-surface-border hover:border-foreground/30"}`}
+                          >
+                            {isQrSelected && (
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center gap-1 mt-2">
+                        <button
+                          onClick={() => updateCapacity(table.number, table.capacity - 1)}
+                          className="w-6 h-6 text-xs border border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
+                        >
+                          −
+                        </button>
+                        <span className="text-gold text-sm w-12">{table.capacity} seats</span>
+                        <button
+                          onClick={() => updateCapacity(table.number, table.capacity + 1)}
+                          className="w-6 h-6 text-xs border border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="flex gap-1 mt-3 justify-center">
+                        <button
+                          onClick={() => toggleTable(table.number)}
+                          className={`px-2 py-1 text-[10px] uppercase tracking-wider border transition-colors ${table.isActive ? "text-green-400 border-green-400/30" : "text-muted border-surface-border"}`}
+                        >
+                          {table.isActive ? "Active" : "Off"}
+                        </button>
+                        <button
+                          onClick={() => removeTable(table.number)}
+                          className="px-2 py-1 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {/* QR download buttons */}
+                      {table.isActive && (
+                        <div className="flex gap-1 mt-2 justify-center">
+                          <button
+                            onClick={() => downloadSingleQrPng(table.number)}
+                            className="px-2 py-1 text-[9px] border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 tracking-wider uppercase transition-colors"
+                          >
+                            PNG
+                          </button>
+                          <button
+                            onClick={() => downloadSinglePdf(table.number)}
+                            className="px-2 py-1 text-[9px] border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 tracking-wider uppercase transition-colors"
+                          >
+                            PDF
+                          </button>
+                          <button
+                            onClick={() => openPdfPreview(table.number)}
+                            className="px-2 py-1 text-[9px] border border-gold text-gold hover:bg-gold hover:text-background tracking-wider uppercase transition-all"
+                          >
+                            Preview
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-1 mt-3 justify-center">
-                      <button
-                        onClick={() => toggleTable(table.number)}
-                        className={`px-2 py-1 text-[10px] uppercase tracking-wider border transition-colors ${table.isActive ? "text-green-400 border-green-400/30" : "text-muted border-surface-border"}`}
-                      >
-                        {table.isActive ? "Active" : "Off"}
-                      </button>
-                      <button
-                        onClick={() => removeTable(table.number)}
-                        className="px-2 py-1 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
       )}
-
       {/* ========== CLOSURES TAB ========== */}
       {activeTab === "closures" && (
         <div className="space-y-6">
@@ -489,7 +720,6 @@ export default function AdminSettings() {
               <p className="text-2xl font-bold text-foreground mt-1">{closedDates.length}</p>
             </div>
           </div>
-
           {/* Add closure */}
           <div className="bg-surface border border-surface-border p-6">
             <h2 className="text-foreground font-medium mb-2">Add Closure</h2>
@@ -524,7 +754,6 @@ export default function AdminSettings() {
               </button>
             </div>
           </div>
-
           {/* Upcoming */}
           {upcomingClosures.length > 0 && (
             <div className="bg-surface border border-surface-border p-6">
@@ -545,7 +774,6 @@ export default function AdminSettings() {
               </div>
             </div>
           )}
-
           {/* Past */}
           {pastClosures.length > 0 && (
             <div className="bg-surface border border-surface-border p-6">
@@ -566,7 +794,6 @@ export default function AdminSettings() {
               </div>
             </div>
           )}
-
           {closedDates.length === 0 && (
             <div className="bg-surface border border-surface-border p-8 text-center text-muted text-sm">
               No closures set. The restaurant is open every day.
@@ -574,7 +801,6 @@ export default function AdminSettings() {
           )}
         </div>
       )}
-
       {/* ========== EVENTS TAB ========== */}
       {activeTab === "events" && (
         <div className="space-y-6">
@@ -589,7 +815,6 @@ export default function AdminSettings() {
               <p className="text-2xl font-bold text-green-400 mt-1">{events.filter((e) => e.isActive).length}</p>
             </div>
           </div>
-
           {/* Add button */}
           <div className="flex justify-end">
             <button
@@ -599,7 +824,6 @@ export default function AdminSettings() {
               + Add Event / Promo
             </button>
           </div>
-
           {/* Events list */}
           {events.length === 0 ? (
             <div className="bg-surface border border-surface-border p-8 text-center text-muted text-sm">
@@ -652,7 +876,6 @@ export default function AdminSettings() {
           )}
         </div>
       )}
-
       {/* Event Modal */}
       {showEventModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -754,6 +977,111 @@ export default function AdminSettings() {
                 className="px-5 py-2 text-sm bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
               >
                 {editingEventId ? "Update" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ========== ADMINS TAB ========== */}
+      {activeTab === "admins" && (
+        <div className="space-y-6">
+          <div className="bg-surface border border-surface-border p-6">
+            <h2 className="text-foreground font-medium mb-4">Add New Administrator</h2>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Name</label>
+                <input
+                  type="text"
+                  value={adminForm.name}
+                  onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                  className="bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none"
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={adminForm.email}
+                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                  className="bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none"
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={adminForm.password}
+                  onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                  className="bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              <button
+                onClick={addAdmin}
+                className="px-5 py-2.5 bg-gold text-background text-sm font-semibold tracking-wider uppercase hover:bg-gold-light"
+              >
+                + Add Admin
+              </button>
+            </div>
+          </div>
+          <div className="bg-surface border border-surface-border">
+            <div className="px-6 py-4 border-b border-surface-border">
+              <h2 className="text-foreground font-medium">Internal Users</h2>
+              <p className="text-xs text-muted mt-1">These users have full access to the management dashboard.</p>
+            </div>
+            {loadingAdmins ? (
+              <div className="p-8 text-center text-muted">Loading...</div>
+            ) : (
+              <div className="divide-y divide-surface-border">
+                {admins.map((a) => (
+                  <div key={a._id} className="flex justify-between items-center p-4 hover:bg-surface-light transition-colors">
+                    <div>
+                      <p className="font-medium text-foreground">{a.name}</p>
+                      <p className="text-sm text-muted">{a.email}</p>
+                    </div>
+                    <button
+                      onClick={() => deleteAdmin(a._id, a.email)}
+                      className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* PDF Preview Modal */}
+      {previewTable !== null && previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-surface-border w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
+              <h2 className="text-foreground font-medium">PDF Preview — Table {previewTable}</h2>
+              <button onClick={closePdfPreview} className="text-muted hover:text-foreground text-xl">
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-background">
+              <iframe src={previewUrl} className="w-full h-[65vh] border-0" title="PDF Preview" />
+            </div>
+            <div className="px-6 py-4 border-t border-surface-border flex justify-end gap-3">
+              <button
+                onClick={closePdfPreview}
+                className="px-4 py-2 text-sm text-muted border border-surface-border hover:text-foreground hover:border-foreground/30 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  downloadSinglePdf(previewTable);
+                  closePdfPreview();
+                }}
+                className="px-4 py-2 text-sm bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors"
+              >
+                Download PDF
               </button>
             </div>
           </div>
