@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import ConfirmModal from "@/components/ConfirmModal";
 import { generateQrPng } from "@/lib/qr/generateQR";
 import { generateTablePdf, type PdfTheme } from "@/lib/qr/generatePdf";
 import { generatePdfZip } from "@/lib/qr/generatePdfZip";
@@ -63,6 +64,9 @@ export default function AdminSettings() {
     badgeColor: "gold",
     isActive: true,
   });
+  const [confirmDeleteTableNum, setConfirmDeleteTableNum] = useState<number | null>(null);
+  const [confirmDeleteAdmin, setConfirmDeleteAdmin] = useState<{ id: string; email: string } | null>(null);
+
   const loadSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/settings");
@@ -119,7 +123,6 @@ export default function AdminSettings() {
     }
   };
   const deleteAdmin = async (id: string, email: string) => {
-    if (!confirm(`Delete admin ${email}?`)) return;
     try {
       const res = await fetch(`/api/admins/${id}`, { method: "DELETE" });
       const data = await res.json();
@@ -164,7 +167,7 @@ export default function AdminSettings() {
     for (let i = 0; i < addCount; i++) nt.push({ number: maxNum + i + 1, capacity: addCapacity, isActive: true });
     setTables([...tables, ...nt]);
   };
-  const removeTable = (num: number) => setTables(tables.filter((t) => t.number !== num));
+  const confirmRemoveTable = (num: number) => setTables(tables.filter((t) => t.number !== num));
   const toggleTable = (num: number) => setTables(tables.map((t) => (t.number === num ? { ...t, isActive: !t.isActive } : t)));
   const updateCapacity = (num: number, cap: number) => setTables(tables.map((t) => (t.number === num ? { ...t, capacity: Math.max(1, cap) } : t)));
   // Closure helpers
@@ -667,7 +670,7 @@ export default function AdminSettings() {
                           {table.isActive ? "Active" : "Off"}
                         </button>
                         <button
-                          onClick={() => removeTable(table.number)}
+                          onClick={() => setConfirmDeleteTableNum(table.number)}
                           className="px-2 py-1 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
                         >
                           ×
@@ -1040,7 +1043,7 @@ export default function AdminSettings() {
                       <p className="text-sm text-muted">{a.email}</p>
                     </div>
                     <button
-                      onClick={() => deleteAdmin(a._id, a.email)}
+                      onClick={() => setConfirmDeleteAdmin({ id: a._id, email: a.email })}
                       className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
                     >
                       Remove
@@ -1085,6 +1088,26 @@ export default function AdminSettings() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteTableNum}
+        title="Delete Table"
+        message={`Are you sure you want to delete Table ${confirmDeleteTableNum}?`}
+        onConfirm={() => {
+          if (confirmDeleteTableNum !== null) confirmRemoveTable(confirmDeleteTableNum);
+        }}
+        onCancel={() => setConfirmDeleteTableNum(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteAdmin}
+        title="Remove Administrator"
+        message={`Are you sure you want to remove ${confirmDeleteAdmin?.email} from administrators?`}
+        onConfirm={() => {
+          if (confirmDeleteAdmin) deleteAdmin(confirmDeleteAdmin.id, confirmDeleteAdmin.email);
+        }}
+        onCancel={() => setConfirmDeleteAdmin(null)}
+      />
     </div>
   );
 }

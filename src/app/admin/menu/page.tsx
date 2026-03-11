@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface MenuItem {
   _id: string;
@@ -36,6 +37,7 @@ export default function AdminMenu() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden">("all");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
     try {
@@ -53,20 +55,24 @@ export default function AdminMenu() {
     loadItems();
   }, [loadItems]);
 
-  const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowModal(true); };
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  };
 
   const openEdit = (item: MenuItem) => {
     setEditingId(item._id);
-    setForm({ 
-      name: item.name, 
-      description: item.description, 
-      price: item.price, 
-      category: item.category, 
-      tag: item.tag || "", 
+    setForm({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      category: item.category,
+      tag: item.tag || "",
       image: item.image || "",
       isJainAvailable: item.isJainAvailable || false,
-      isActive: item.isActive, 
-      sortOrder: item.sortOrder || 0 
+      isActive: item.isActive,
+      sortOrder: item.sortOrder || 0,
     });
     setShowModal(true);
   };
@@ -82,19 +88,33 @@ export default function AdminMenu() {
       }
       setShowModal(false);
       loadItems();
-    } catch (error) { console.error("Save error:", error); } finally { setSaving(false); }
+    } catch (error) {
+      console.error("Save error:", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleActive = async (item: MenuItem) => {
     try {
-      await fetch(`/api/menu/${item._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !item.isActive }) });
+      await fetch(`/api/menu/${item._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !item.isActive }),
+      });
       loadItems();
-    } catch (error) { console.error("Toggle error:", error); }
+    } catch (error) {
+      console.error("Toggle error:", error);
+    }
   };
 
   const deleteItem = async (id: string) => {
-    if (!confirm("Delete this menu item permanently?")) return;
-    try { await fetch(`/api/menu/${id}`, { method: "DELETE" }); loadItems(); } catch (error) { console.error("Delete error:", error); }
+    try {
+      await fetch(`/api/menu/${id}`, { method: "DELETE" });
+      loadItems();
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +149,10 @@ export default function AdminMenu() {
           <h1 className="text-2xl text-foreground font-semibold">Menu Items</h1>
           <p className="text-muted text-sm mt-1">Manage your restaurant menu</p>
         </div>
-        <button onClick={openCreate} className="px-6 py-2.5 bg-gold text-background text-sm font-semibold tracking-widest uppercase hover:bg-gold-light transition-colors">
+        <button
+          onClick={openCreate}
+          className="px-6 py-2.5 bg-gold text-background text-sm font-semibold tracking-widest uppercase hover:bg-gold-light transition-colors"
+        >
           + Add Item
         </button>
       </div>
@@ -138,7 +161,10 @@ export default function AdminMenu() {
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {/* All — resets both filters */}
         <button
-          onClick={() => { setActiveTab("all"); setStatusFilter("all"); }}
+          onClick={() => {
+            setActiveTab("all");
+            setStatusFilter("all");
+          }}
           className={`px-4 py-2 text-sm tracking-wider uppercase border transition-all ${
             activeTab === "all" && statusFilter === "all"
               ? "border-gold text-gold bg-gold/10"
@@ -150,7 +176,10 @@ export default function AdminMenu() {
 
         {/* Active */}
         <button
-          onClick={() => { setStatusFilter("active"); setActiveTab("all"); }}
+          onClick={() => {
+            setStatusFilter("active");
+            setActiveTab("all");
+          }}
           className={`px-4 py-2 text-sm tracking-wider uppercase border transition-all ${
             statusFilter === "active"
               ? "border-green-400 text-green-400 bg-green-400/10"
@@ -162,7 +191,10 @@ export default function AdminMenu() {
 
         {/* Hidden */}
         <button
-          onClick={() => { setStatusFilter("hidden"); setActiveTab("all"); }}
+          onClick={() => {
+            setStatusFilter("hidden");
+            setActiveTab("all");
+          }}
           className={`px-4 py-2 text-sm tracking-wider uppercase border transition-all ${
             statusFilter === "hidden"
               ? "border-red-400 text-red-400 bg-red-400/10"
@@ -176,7 +208,10 @@ export default function AdminMenu() {
         {["starters", "mains", "desserts", "drinks"].map((cat) => (
           <button
             key={cat}
-            onClick={() => { setActiveTab(cat); setStatusFilter("all"); }}
+            onClick={() => {
+              setActiveTab(cat);
+              setStatusFilter("all");
+            }}
             className={`px-4 py-2 text-sm tracking-wider uppercase border transition-all ${
               activeTab === cat
                 ? "border-gold text-gold bg-gold/10"
@@ -195,9 +230,7 @@ export default function AdminMenu() {
             <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="p-8 text-center text-muted">
-            No menu items found. Click &quot;Add Item&quot; to create one.
-          </div>
+          <div className="p-8 text-center text-muted">No menu items found. Click &quot;Add Item&quot; to create one.</div>
         ) : (
           <table className="w-full">
             <thead>
@@ -228,16 +261,21 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-foreground font-medium flex items-center gap-2">
-                       {item.name}
-                       {item.isJainAvailable && (
-                         <span title="Available for Jain" className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider">
-                           Jain Opt
-                         </span>
-                       )}
+                      {item.name}
+                      {item.isJainAvailable && (
+                        <span
+                          title="Available for Jain"
+                          className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider"
+                        >
+                          Jain Opt
+                        </span>
+                      )}
                     </p>
                     <p className="text-muted text-xs mt-0.5 max-w-xs truncate">{item.description}</p>
                   </td>
-                  <td className="px-4 py-3"><span className="text-muted text-sm capitalize">{item.category}</span></td>
+                  <td className="px-4 py-3">
+                    <span className="text-muted text-sm capitalize">{item.category}</span>
+                  </td>
                   <td className="px-4 py-3 text-gold font-medium">{item.price}</td>
                   <td className="px-4 py-3">
                     {item.tag ? (
@@ -258,8 +296,18 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <button onClick={() => openEdit(item)} className="px-2 py-1 text-xs text-blue-400 border border-blue-400/30 hover:bg-blue-400/10 transition-colors">Edit</button>
-                      <button onClick={() => deleteItem(item._id)} className="px-2 py-1 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors">Delete</button>
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="px-2 py-1 text-xs text-blue-400 border border-blue-400/30 hover:bg-blue-400/10 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(item._id)}
+                        className="px-2 py-1 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -275,30 +323,50 @@ export default function AdminMenu() {
           <div className="bg-surface border border-surface-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
               <h2 className="text-foreground font-medium text-lg">{editingId ? "Edit Menu Item" : "Add Menu Item"}</h2>
-              <button onClick={() => setShowModal(false)} className="text-muted hover:text-foreground text-xl">×</button>
+              <button onClick={() => setShowModal(false)} className="text-muted hover:text-foreground text-xl">
+                ×
+              </button>
             </div>
 
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Name *</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors" placeholder="Wagyu Ribeye" />
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Wagyu Ribeye"
+                />
               </div>
               <div>
                 <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Description *</label>
-                <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none resize-none transition-colors" placeholder="A5 Japanese wagyu, bone marrow butter..." />
+                <textarea
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none resize-none transition-colors"
+                  placeholder="A5 Japanese wagyu, bone marrow butter..."
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Price *</label>
-                  <input type="text" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors" placeholder="$85" />
+                  <input
+                    type="text"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                    placeholder="$85"
+                  />
                 </div>
                 <div>
                   <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Category *</label>
-                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors">
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  >
                     <option value="starters">Starters</option>
                     <option value="mains">Main Courses</option>
                     <option value="desserts">Desserts</option>
@@ -309,13 +377,22 @@ export default function AdminMenu() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Tag</label>
-                  <input type="text" value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })}
-                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors" placeholder="Signature, Chef's Pick..." />
+                  <input
+                    type="text"
+                    value={form.tag}
+                    onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                    placeholder="Signature, Chef's Pick..."
+                  />
                 </div>
                 <div>
                   <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Sort Order</label>
-                  <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
-                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors" />
+                  <input
+                    type="number"
+                    value={form.sortOrder}
+                    onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  />
                 </div>
               </div>
 
@@ -327,40 +404,76 @@ export default function AdminMenu() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
                     </div>
-                    <button type="button" onClick={removeImage} className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors uppercase tracking-wider">
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors uppercase tracking-wider"
+                    >
                       Remove
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <input type="file" accept="image/*" onChange={handleImageChange}
-                      className="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:border file:border-surface-border file:text-sm file:font-semibold file:bg-surface file:text-foreground hover:file:bg-surface-light cursor-pointer" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:border file:border-surface-border file:text-sm file:font-semibold file:bg-surface file:text-foreground hover:file:bg-surface-light cursor-pointer"
+                    />
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 accent-[var(--gold)]" />
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="w-4 h-4 accent-gold"
+                  />
                   <span className="text-foreground text-sm">Active (visible directly)</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={form.isJainAvailable} onChange={(e) => setForm({ ...form, isJainAvailable: e.target.checked })} className="w-4 h-4 accent-[var(--gold)]" />
+                  <input
+                    type="checkbox"
+                    checked={form.isJainAvailable}
+                    onChange={(e) => setForm({ ...form, isJainAvailable: e.target.checked })}
+                    className="w-4 h-4 accent-gold"
+                  />
                   <span className="text-foreground text-sm">Available for Jain</span>
                 </label>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t border-surface-border flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-5 py-2 text-sm text-muted border border-surface-border hover:text-foreground hover:border-foreground/30 transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={saving || !form.name || !form.description || !form.price}
-                className="px-5 py-2 text-sm bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors disabled:opacity-50">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2 text-sm text-muted border border-surface-border hover:text-foreground hover:border-foreground/30 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !form.name || !form.description || !form.price}
+                className="px-5 py-2 text-sm bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+              >
                 {saving ? "Saving..." : editingId ? "Update" : "Create"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        title="Delete Menu Item"
+        message="Are you sure you want to permanently delete this menu item? This cannot be undone."
+        onConfirm={() => {
+          if (confirmDeleteId) deleteItem(confirmDeleteId);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

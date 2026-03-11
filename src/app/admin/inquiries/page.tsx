@@ -5,10 +5,13 @@ import { useEffect, useState, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Inquiry = any;
 
+import ConfirmModal from "@/components/ConfirmModal";
+
 export default function AdminInquiries() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadInquiries = useCallback(async () => {
     setLoading(true);
@@ -43,7 +46,6 @@ export default function AdminInquiries() {
   };
 
   const deleteInquiry = async (id: string) => {
-    if (!confirm("Permanently delete this inquiry?")) return;
     try {
       await fetch(`/api/inquiries/${id}`, { method: "DELETE" });
       loadInquiries();
@@ -155,7 +157,7 @@ export default function AdminInquiries() {
                   </button>
                 )}
                 <button
-                  onClick={() => deleteInquiry(iq._id)}
+                  onClick={() => setConfirmDeleteId(iq._id)}
                   className="flex-1 py-1.5 px-3 text-xs text-red-400/60 border border-red-400/20 hover:bg-red-400/10 hover:text-red-400 transition-colors text-center"
                 >
                   Delete
@@ -165,6 +167,16 @@ export default function AdminInquiries() {
           ))
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        title="Delete Inquiry"
+        message="Are you sure you want to permanently delete this inquiry? This action cannot be undone."
+        onConfirm={() => {
+          if (confirmDeleteId) deleteInquiry(confirmDeleteId);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

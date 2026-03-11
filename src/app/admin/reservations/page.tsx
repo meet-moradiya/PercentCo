@@ -5,6 +5,8 @@ import { useEffect, useState, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Reservation = any;
 
+import ConfirmModal from "@/components/ConfirmModal";
+
 interface TableOption {
   number: number;
   capacity: number;
@@ -22,6 +24,8 @@ export default function AdminReservations() {
   const [assignModal, setAssignModal] = useState<{ id: string; date: string; time: string; guests: number } | null>(null);
   const [availableTables, setAvailableTables] = useState<TableOption[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   const [editModal, setEditModal] = useState<{ id: string; date: string; time: string; guests: number; name: string } | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -156,7 +160,6 @@ export default function AdminReservations() {
   };
 
   const deleteReservation = async (id: string) => {
-    if (!confirm("Delete this reservation permanently?")) return;
     try {
       await fetch(`/api/reservations/${id}`, { method: "DELETE" });
       loadReservations();
@@ -369,7 +372,7 @@ export default function AdminReservations() {
                       )}
                       {["pending", "confirmed"].includes(r.status) && (
                         <button
-                          onClick={() => updateStatus(r._id, "cancelled")}
+                          onClick={() => setConfirmCancelId(r._id)}
                           className="px-2 py-0.5 text-[10px] text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
                         >
                           Cancel
@@ -384,7 +387,7 @@ export default function AdminReservations() {
                         </button>
                       )}
                       <button
-                        onClick={() => deleteReservation(r._id)}
+                        onClick={() => setConfirmDeleteId(r._id)}
                         className="px-2 py-0.5 text-[10px] text-red-400/60 border border-red-400/20 hover:bg-red-400/10 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -545,6 +548,29 @@ export default function AdminReservations() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        title="Delete Reservation"
+        message="Are you sure you want to permanently delete this reservation? This cannot be undone."
+        onConfirm={() => {
+          if (confirmDeleteId) deleteReservation(confirmDeleteId);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmCancelId}
+        title="Cancel Reservation"
+        message="Are you sure you want to cancel this reservation?"
+        onConfirm={() => {
+          if (confirmCancelId) {
+            updateStatus(confirmCancelId, "cancelled");
+            setConfirmCancelId(null);
+          }
+        }}
+        onCancel={() => setConfirmCancelId(null)}
+      />
     </div>
   );
 }
