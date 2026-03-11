@@ -9,6 +9,8 @@ interface MenuItem {
   price: string;
   category: string;
   tag: string;
+  image?: string;
+  isJainAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
 }
@@ -19,6 +21,8 @@ const emptyForm = {
   price: "",
   category: "starters",
   tag: "",
+  image: "",
+  isJainAvailable: false,
   isActive: true,
   sortOrder: 0,
 };
@@ -53,7 +57,17 @@ export default function AdminMenu() {
 
   const openEdit = (item: MenuItem) => {
     setEditingId(item._id);
-    setForm({ name: item.name, description: item.description, price: item.price, category: item.category, tag: item.tag || "", isActive: item.isActive, sortOrder: item.sortOrder || 0 });
+    setForm({ 
+      name: item.name, 
+      description: item.description, 
+      price: item.price, 
+      category: item.category, 
+      tag: item.tag || "", 
+      image: item.image || "",
+      isJainAvailable: item.isJainAvailable || false,
+      isActive: item.isActive, 
+      sortOrder: item.sortOrder || 0 
+    });
     setShowModal(true);
   };
 
@@ -81,6 +95,21 @@ export default function AdminMenu() {
   const deleteItem = async (id: string) => {
     if (!confirm("Delete this menu item permanently?")) return;
     try { await fetch(`/api/menu/${id}`, { method: "DELETE" }); loadItems(); } catch (error) { console.error("Delete error:", error); }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm({ ...form, image: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setForm({ ...form, image: "" });
   };
 
   const filteredItems = items
@@ -173,6 +202,7 @@ export default function AdminMenu() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-surface-border text-muted text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 text-left w-16">Image</th>
                 <th className="px-4 py-3 text-left">Item</th>
                 <th className="px-4 py-3 text-left">Category</th>
                 <th className="px-4 py-3 text-left">Price</th>
@@ -185,7 +215,26 @@ export default function AdminMenu() {
               {filteredItems.map((item) => (
                 <tr key={item._id} className="hover:bg-surface-light transition-colors">
                   <td className="px-4 py-3">
-                    <p className="text-foreground font-medium">{item.name}</p>
+                    {item.image ? (
+                      <div className="w-12 h-12 rounded overflow-hidden border border-surface-border shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded bg-surface-border/50 flex items-center justify-center shrink-0">
+                        <span className="text-[10px] text-muted font-medium">None</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-foreground font-medium flex items-center gap-2">
+                       {item.name}
+                       {item.isJainAvailable && (
+                         <span title="Available for Jain" className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider">
+                           Jain Opt
+                         </span>
+                       )}
+                    </p>
                     <p className="text-muted text-xs mt-0.5 max-w-xs truncate">{item.description}</p>
                   </td>
                   <td className="px-4 py-3"><span className="text-muted text-sm capitalize">{item.category}</span></td>
@@ -269,10 +318,37 @@ export default function AdminMenu() {
                     className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors" />
                 </div>
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 accent-[var(--gold)]" />
-                <span className="text-foreground text-sm">Active (visible on public menu)</span>
-              </label>
+
+              <div>
+                <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Menu Item Image</label>
+                {form.image ? (
+                  <div className="flex items-end gap-4">
+                    <div className="w-24 h-24 rounded border border-surface-border overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                    <button type="button" onClick={removeImage} className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors uppercase tracking-wider">
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input type="file" accept="image/*" onChange={handleImageChange}
+                      className="w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:border file:border-surface-border file:text-sm file:font-semibold file:bg-surface file:text-foreground hover:file:bg-surface-light cursor-pointer" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 accent-[var(--gold)]" />
+                  <span className="text-foreground text-sm">Active (visible directly)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={form.isJainAvailable} onChange={(e) => setForm({ ...form, isJainAvailable: e.target.checked })} className="w-4 h-4 accent-[var(--gold)]" />
+                  <span className="text-foreground text-sm">Available for Jain</span>
+                </label>
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-surface-border flex justify-end gap-3">

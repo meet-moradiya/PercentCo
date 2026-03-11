@@ -7,6 +7,7 @@ interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  isJain?: boolean;
 }
 
 interface Order {
@@ -171,9 +172,14 @@ export default function AdminOrders() {
                   <p className="text-muted text-xs mb-2">{order.customerName}</p>
                   <div className="space-y-1 mb-3">
                     {order.items.map((item, i) => (
-                      <div key={i} className="flex justify-between text-sm">
+                      <div key={i} className="flex justify-between text-sm mb-1">
                         <span className="text-foreground/80">
                           {item.quantity}× {item.name}
+                          {item.isJain && (
+                            <span className="ml-2 text-[10px] text-green-400 border border-green-500/30 px-1 py-0.5 uppercase tracking-wider bg-green-900/40 rounded">
+                              Jain
+                            </span>
+                          )}
                         </span>
                         <span className="text-muted">₹{(item.price * item.quantity).toFixed(0)}</span>
                       </div>
@@ -246,7 +252,7 @@ export default function AdminOrders() {
                       <td className="p-4 text-foreground font-bold">T{order.tableNumber}</td>
                       <td className="p-4 text-foreground">{order.customerName}</td>
                       <td className="p-4 text-muted">
-                        {order.items.map((it) => `${it.quantity}× ${it.name}`).join(", ")}
+                        {order.items.map((it) => `${it.quantity}× ${it.name}${it.isJain ? " (Jain)" : ""}`).join(", ")}
                       </td>
                       <td className="p-4 text-gold font-semibold">₹{order.total.toFixed(0)}</td>
                       <td className="p-4 text-muted">{formatTime(order.createdAt)}</td>

@@ -5,6 +5,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  isJain: boolean;
 }
 
 export interface IOrder extends Document {
@@ -23,6 +24,7 @@ const OrderItemSchema = new Schema<OrderItem>(
     name: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true, min: 1 },
+    isJain: { type: Boolean, default: false },
   },
   { _id: false }
 );

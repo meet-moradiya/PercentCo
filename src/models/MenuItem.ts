@@ -6,6 +6,8 @@ export interface IMenuItem extends Document {
   price: string;
   category: "starters" | "mains" | "desserts" | "drinks";
   tag: string;
+  image: string;
+  isJainAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -22,6 +24,8 @@ const MenuItemSchema = new Schema<IMenuItem>(
       enum: ["starters", "mains", "desserts", "drinks"],
     },
     tag: { type: String, default: "" },
+    image: { type: String, default: "" },
+    isJainAvailable: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
   },

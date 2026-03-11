@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import MenuItemModel from "@/models/MenuItem";
 import { verifyToken } from "@/lib/auth";
+import cloudinary from "@/lib/cloudinary";
 
 // GET — Public: list menu items (add ?all=true for admin to include inactive)
 export async function GET(req: NextRequest) {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    const { name, description, price, category, tag, isActive, sortOrder } = body;
+    const { name, description, price, category, tag, image, isJainAvailable, isActive, sortOrder } = body;
 
     if (!name || !description || !price || !category) {
       return NextResponse.json(
@@ -45,12 +46,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid category" }, { status: 400 });
     }
 
+    let imageUrl = "";
+    if (image && image.startsWith("data:image")) {
+      const uploadRes = await cloudinary.uploader.upload(image, {
+        folder: "percentco_menu",
+      });
+      imageUrl = uploadRes.secure_url;
+    }
+
     const item = await MenuItemModel.create({
       name: name.trim(),
       description: description.trim(),
       price: price.trim(),
       category,
       tag: tag || "",
+      image: imageUrl,
+      isJainAvailable: !!isJainAvailable,
       isActive: isActive !== false,
       sortOrder: sortOrder || 0,
     });

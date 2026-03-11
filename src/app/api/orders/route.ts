@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         name: item.name,
         price,
         quantity,
+        isJain: !!item.isJain,
       });
     }
 

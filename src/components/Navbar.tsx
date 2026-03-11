@@ -36,8 +36,6 @@ export default function Navbar() {
 
   const linkColor = scrolled ? "text-foreground/70 hover:text-gold" : "text-white/80 hover:text-gold";
 
-  const hamburgerColor = scrolled ? "bg-foreground" : "bg-white";
-
   return (
     <>
       {/* Mobile Menu */}
@@ -106,7 +104,7 @@ export default function Navbar() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className={`w-full h-[2px] rounded-full ${hamburgerColor} transition-all duration-300 ${
+                className={`w-full h-[2px] rounded-full bg-gold transition-all duration-300 ${
                   mobileOpen ? (i === 0 ? "rotate-45 translate-y-1" : i === 1 ? "opacity-0" : "-rotate-45 -translate-y-2.5") : ""
                 }`}
               />

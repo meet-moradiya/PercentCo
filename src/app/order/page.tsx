@@ -18,13 +18,17 @@ interface MenuItem {
   price: string;
   category: string;
   tag: string;
+  image?: string;
+  isJainAvailable?: boolean;
 }
 
 interface CartItem {
+  cartId: string;
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
+  isJain: boolean;
 }
 
 const categories = [
@@ -93,30 +97,33 @@ function OrderPageInner() {
   };
 
   // Cart operations
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (item: MenuItem, isJain: boolean) => {
+    const cartId = `${item._id}-${isJain ? "jain" : "reg"}`;
     setCart((prev) => {
-      const existing = prev.find((c) => c.menuItemId === item._id);
+      const existing = prev.find((c) => c.cartId === cartId);
       if (existing) {
-        return prev.map((c) => (c.menuItemId === item._id ? { ...c, quantity: c.quantity + 1 } : c));
+        return prev.map((c) => (c.cartId === cartId ? { ...c, quantity: c.quantity + 1 } : c));
       }
       return [
         ...prev,
         {
+          cartId,
           menuItemId: item._id,
           name: item.name,
           price: parseFloat(item.price),
           quantity: 1,
+          isJain,
         },
       ];
     });
   };
 
-  const updateQuantity = (menuItemId: string, delta: number) => {
-    setCart((prev) => prev.map((c) => (c.menuItemId === menuItemId ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0));
+  const updateQuantity = (cartId: string, delta: number) => {
+    setCart((prev) => prev.map((c) => (c.cartId === cartId ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0));
   };
 
-  const removeFromCart = (menuItemId: string) => {
-    setCart((prev) => prev.filter((c) => c.menuItemId !== menuItemId));
+  const removeFromCart = (cartId: string) => {
+    setCart((prev) => prev.filter((c) => c.cartId !== cartId));
   };
 
   const cartTotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
@@ -208,7 +215,10 @@ function OrderPageInner() {
   // Filtered menu
   const filteredMenu = activeCategory === "all" ? menuItems : menuItems.filter((m) => m.category === activeCategory);
 
-  const getCartQty = (id: string) => cart.find((c) => c.menuItemId === id)?.quantity || 0;
+  const getCartQty = (id: string, isJain: boolean) => {
+    const cartId = `${id}-${isJain ? "jain" : "reg"}`;
+    return cart.find((c) => c.cartId === cartId)?.quantity || 0;
+  };
 
   if (loading) {
     return (
@@ -376,7 +386,9 @@ function OrderPageInner() {
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
               {filteredMenu.map((item) => {
-                const qty = getCartQty(item._id);
+                const qtyReg = getCartQty(item._id, false);
+                const qtyJain = item.isJainAvailable ? getCartQty(item._id, true) : 0;
+                
                 return (
                   <div
                     key={item._id}
@@ -387,38 +399,87 @@ function OrderPageInner() {
                         <h3 className="text-foreground font-semibold">{item.name}</h3>
                         <span className="text-gold font-bold whitespace-nowrap">₹{item.price}</span>
                       </div>
-                      <p className="text-muted text-sm mb-3 line-clamp-2">{item.description}</p>
-                      {item.tag && (
-                        <span className="px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold border border-gold/30 mb-3 inline-block">
-                          {item.tag}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-3">
-                      {qty === 0 ? (
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="w-full py-2 border border-gold text-gold text-sm tracking-wider uppercase hover:bg-gold hover:text-background transition-all"
-                        >
-                          Add to Order
-                        </button>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => updateQuantity(item._id, -1)}
-                            className="w-9 h-9 border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 text-lg transition-colors"
-                          >
-                            −
-                          </button>
-                          <span className="text-foreground font-bold">{qty}</span>
-                          <button
-                            onClick={() => updateQuantity(item._id, 1)}
-                            className="w-9 h-9 border border-gold text-gold hover:bg-gold hover:text-background text-lg transition-all"
-                          >
-                            +
-                          </button>
+                      
+                      <div className="flex gap-4 items-start mb-3">
+                        <div className="w-16 h-16 shrink-0 border border-surface-border overflow-hidden rounded bg-surface-light">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
+                            alt={item.name} 
+                            className="w-full h-full object-cover" 
+                          />
                         </div>
-                      )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-muted text-sm line-clamp-2">{item.description}</p>
+                          {item.tag && (
+                            <span className="px-2 py-0.5 mt-2 text-[10px] uppercase tracking-wider text-gold border border-gold/30 inline-block">
+                              {item.tag}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 space-y-2">
+                       {/* Regular Option */}
+                       <div className="flex items-center justify-between">
+                         {item.isJainAvailable && <span className="text-sm text-foreground/80">Regular</span>}
+                         {qtyReg === 0 ? (
+                            <button
+                              onClick={() => addToCart(item, false)}
+                              className={`py-1.5 px-4 border border-gold text-gold text-xs tracking-wider uppercase hover:bg-gold hover:text-background transition-all ${!item.isJainAvailable ? "w-full" : ""}`}
+                            >
+                              Add{item.isJainAvailable ? "" : " to Order"}
+                            </button>
+                          ) : (
+                            <div className="flex items-center justify-between w-24">
+                              <button
+                                onClick={() => updateQuantity(`${item._id}-reg`, -1)}
+                                className="w-7 h-7 flex items-center justify-center border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+                              >
+                                −
+                              </button>
+                              <span className="text-foreground text-sm font-bold">{qtyReg}</span>
+                              <button
+                                onClick={() => updateQuantity(`${item._id}-reg`, 1)}
+                                className="w-7 h-7 flex items-center justify-center border border-gold text-gold hover:bg-gold hover:text-background transition-all"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                       </div>
+                       
+                       {/* Jain Option */}
+                       {item.isJainAvailable && (
+                         <div className="flex items-center justify-between pt-2 border-t border-surface-border/50">
+                           <span className="text-sm text-green-400 font-medium">Jain Preparation</span>
+                           {qtyJain === 0 ? (
+                              <button
+                                onClick={() => addToCart(item, true)}
+                                className="py-1.5 px-4 border border-green-500/50 text-green-400 text-xs tracking-wider uppercase hover:bg-green-500 hover:text-background transition-all"
+                              >
+                                Add
+                              </button>
+                            ) : (
+                              <div className="flex items-center justify-between w-24">
+                                <button
+                                  onClick={() => updateQuantity(`${item._id}-jain`, -1)}
+                                  className="w-7 h-7 flex items-center justify-center border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+                                >
+                                  −
+                                </button>
+                                <span className="text-foreground text-sm font-bold">{qtyJain}</span>
+                                <button
+                                  onClick={() => updateQuantity(`${item._id}-jain`, 1)}
+                                  className="w-7 h-7 flex items-center justify-center border border-green-500/50 text-green-400 hover:bg-green-500 hover:text-background transition-all"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                         </div>
+                       )}
                     </div>
                   </div>
                 );
@@ -450,16 +511,23 @@ function OrderPageInner() {
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => (
-                    <div key={item.menuItemId} className="flex items-start justify-between gap-3">
+                    <div key={item.cartId} className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-foreground text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-foreground text-sm font-medium truncate">
+                          {item.name}
+                          {item.isJain && (
+                            <span className="ml-1.5 text-[9px] text-green-400 border border-green-500/30 px-1 py-0.5 uppercase tracking-wider bg-green-900/40 rounded align-middle">
+                              Jain
+                            </span>
+                          )}
+                        </p>
                         <p className="text-muted text-xs">
                           ₹{item.price} × {item.quantity}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-gold text-sm font-semibold w-16 text-right">₹{(item.price * item.quantity).toFixed(2)}</span>
-                        <button onClick={() => removeFromCart(item.menuItemId)} className="text-muted/50 hover:text-red-400 transition-colors">
+                        <button onClick={() => removeFromCart(item.cartId)} className="text-muted/50 hover:text-red-400 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>

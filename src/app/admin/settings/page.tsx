@@ -45,7 +45,7 @@ export default function AdminSettings() {
   const [addCount, setAddCount] = useState(1);
   const [addCapacity, setAddCapacity] = useState(4);
   // QR state
-  const [qrCustomText, setQrCustomText] = useState("Scan to order from your table");
+  const [qrCustomText, setQrCustomText] = useState("");
   const [qrSelected, setQrSelected] = useState<Set<number>>(new Set());
   const [qrGenerating, setQrGenerating] = useState(false);
   const [previewTable, setPreviewTable] = useState<number | null>(null);
@@ -75,7 +75,7 @@ export default function AdminSettings() {
         setSlotInterval(data.settings.slotInterval || 30);
         setClosedDates(data.settings.closedDates || []);
         setEvents(data.settings.events || []);
-        setQrCustomText(data.settings.qrCustomText || "Scan to order from your table");
+        setQrCustomText(data.settings.qrCustomText || "");
       }
     } catch (error) {
       console.error("Load settings error:", error);
@@ -578,9 +578,7 @@ export default function AdminSettings() {
             </div>
             {/* Custom text field */}
             <div className="mb-4">
-              <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">
-                Custom Text (below QR on PDF) — supports all languages
-              </label>
+              <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Custom Text (below QR on PDF)</label>
               <textarea
                 rows={2}
                 value={qrCustomText}
