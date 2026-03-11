@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 interface Table {
   number: number;
@@ -41,9 +42,7 @@ function OrderPageInner() {
 
   const [tables, setTables] = useState<Table[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [selectedTable, setSelectedTable] = useState<number | null>(
-    tableParam ? Number(tableParam) : null
-  );
+  const [selectedTable, setSelectedTable] = useState<number | null>(tableParam ? Number(tableParam) : null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [customerName, setCustomerName] = useState("");
@@ -66,19 +65,12 @@ function OrderPageInner() {
 
   const loadData = useCallback(async () => {
     try {
-      const [settingsRes, menuRes] = await Promise.all([
-        fetch("/api/settings"),
-        fetch("/api/menu"),
-      ]);
+      const [settingsRes, menuRes] = await Promise.all([fetch("/api/settings"), fetch("/api/menu")]);
       const settingsData = await settingsRes.json();
       const menuData = await menuRes.json();
 
       if (settingsData.settings?.tables) {
-        setTables(
-          settingsData.settings.tables.filter(
-            (t: Table) => t.isActive
-          )
-        );
+        setTables(settingsData.settings.tables.filter((t: Table) => t.isActive));
       }
       if (menuData.items) {
         setMenuItems(menuData.items);
@@ -105,11 +97,7 @@ function OrderPageInner() {
     setCart((prev) => {
       const existing = prev.find((c) => c.menuItemId === item._id);
       if (existing) {
-        return prev.map((c) =>
-          c.menuItemId === item._id
-            ? { ...c, quantity: c.quantity + 1 }
-            : c
-        );
+        return prev.map((c) => (c.menuItemId === item._id ? { ...c, quantity: c.quantity + 1 } : c));
       }
       return [
         ...prev,
@@ -124,15 +112,7 @@ function OrderPageInner() {
   };
 
   const updateQuantity = (menuItemId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((c) =>
-          c.menuItemId === menuItemId
-            ? { ...c, quantity: c.quantity + delta }
-            : c
-        )
-        .filter((c) => c.quantity > 0)
-    );
+    setCart((prev) => prev.map((c) => (c.menuItemId === menuItemId ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0));
   };
 
   const removeFromCart = (menuItemId: string) => {
@@ -226,13 +206,9 @@ function OrderPageInner() {
   };
 
   // Filtered menu
-  const filteredMenu =
-    activeCategory === "all"
-      ? menuItems
-      : menuItems.filter((m) => m.category === activeCategory);
+  const filteredMenu = activeCategory === "all" ? menuItems : menuItems.filter((m) => m.category === activeCategory);
 
-  const getCartQty = (id: string) =>
-    cart.find((c) => c.menuItemId === id)?.quantity || 0;
+  const getCartQty = (id: string) => cart.find((c) => c.menuItemId === id)?.quantity || 0;
 
   if (loading) {
     return (
@@ -252,9 +228,7 @@ function OrderPageInner() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-foreground">
-            Order Placed!
-          </h1>
+          <h1 className="font-display text-3xl text-foreground">Order Placed!</h1>
           <p className="text-foreground/60">
             Your order for <span className="text-gold font-semibold">Table {orderPlaced.tableNumber}</span> has been received.
           </p>
@@ -293,25 +267,26 @@ function OrderPageInner() {
         {/* Header */}
         <div className="bg-surface border-b border-surface-border">
           <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
-            <Link href="/" className="text-gold text-sm tracking-widest uppercase hover:text-gold-light transition-colors">
-              ← Back to Home
+            <Link href="/" className="flex items-center gap-2 text-gold text-sm tracking-widest uppercase hover:text-gold-light transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M228,128a12,12,0,0,1-12,12H69l51.52,51.51a12,12,0,0,1-17,17l-72-72a12,12,0,0,1,0-17l72-72a12,12,0,0,1,17,17L69,116H216A12,12,0,0,1,228,128Z"></path>
+              </svg>
+              <span>Back</span>
             </Link>
-            <h1 className="font-[family-name:var(--font-display)] text-xl text-foreground">
-              Place an Order
-            </h1>
-            <div className="w-24" />
+            <div>
+              <Link href="/" className="hover:opacity-80 transition-opacity duration-300">
+                <Logo size={44} />
+              </Link>
+            </div>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
-            <span className="text-gold text-sm tracking-[0.3em] uppercase">Step 1</span>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl mt-2 mb-4 text-foreground">
-              Select Your Table
-            </h2>
-            <p className="text-foreground/50 max-w-md mx-auto">
-              Choose the table where you&apos;re seated to start placing your order.
-            </p>
+            <div className="text-gold text-sm tracking-[0.3em] uppercase">Step 1</div>
+            <h1 className="mt-2 font-display text-xl text-foreground">Place an Order</h1>
+            <h2 className="font-display text-3xl md:text-4xl mt-2 mb-4 text-foreground">Select Your Table</h2>
+            <p className="text-foreground/50 max-w-md mx-auto">Choose the table where you&apos;re seated to start placing your order.</p>
           </div>
 
           {tables.length === 0 ? (
@@ -324,9 +299,7 @@ function OrderPageInner() {
                   onClick={() => selectTable(t.number)}
                   className="group border border-surface-border bg-surface p-6 text-center transition-all duration-300 hover:border-gold hover:bg-gold/5"
                 >
-                  <p className="text-2xl font-bold text-foreground group-hover:text-gold transition-colors">
-                    T{t.number}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground group-hover:text-gold transition-colors">T{t.number}</p>
                   <p className="text-muted text-xs mt-1">{t.capacity} seats</p>
                 </button>
               ))}
@@ -349,9 +322,12 @@ function OrderPageInner() {
                 setSelectedTable(null);
                 router.replace("/order", { scroll: false });
               }}
-              className="text-muted hover:text-foreground text-sm transition-colors"
+              className="flex items-center gap-2 text-muted hover:text-foreground text-sm transition-colors"
             >
-              ← Tables
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M228,128a12,12,0,0,1-12,12H69l51.52,51.51a12,12,0,0,1-17,17l-72-72a12,12,0,0,1,0-17l72-72a12,12,0,0,1,17,17L69,116H216A12,12,0,0,1,228,128Z"></path>
+              </svg>
+              <span>Back</span>
             </button>
             <div className="h-5 w-px bg-surface-border" />
             <span className="text-foreground font-semibold">Table {selectedTable}</span>
@@ -360,9 +336,7 @@ function OrderPageInner() {
           {/* Cart badge for mobile */}
           <button
             onClick={() => {
-              document
-                .getElementById("cart-panel")
-                ?.scrollIntoView({ behavior: "smooth" });
+              document.getElementById("cart-panel")?.scrollIntoView({ behavior: "smooth" });
             }}
             className="lg:hidden relative px-4 py-2 bg-gold text-background text-sm font-semibold tracking-wider uppercase"
           >
@@ -380,7 +354,7 @@ function OrderPageInner() {
         {/* Menu Section */}
         <div className="flex-1 min-w-0">
           {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-4 mb-6 border-b border-surface-border">
+          <div className="flex gap-2 overflow-x-auto pb-4 mb-6 sm:border-b sm:border-surface-border">
             {categories.map((cat) => (
               <button
                 key={cat.key}
@@ -454,44 +428,38 @@ function OrderPageInner() {
         </div>
 
         {/* Cart Panel */}
-        <div
-          id="cart-panel"
-          className="lg:w-80 xl:w-96 shrink-0"
-        >
+        <div id="cart-panel" className="lg:w-80 xl:w-96 shrink-0">
           <div className="lg:sticky lg:top-20 bg-surface border border-surface-border">
             <div className="px-5 py-4 border-b border-surface-border">
               <h2 className="text-foreground font-semibold flex items-center gap-2">
                 <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"
+                  />
                 </svg>
                 Your Order
-                {cartCount > 0 && (
-                  <span className="text-xs text-muted">({cartCount} items)</span>
-                )}
+                {cartCount > 0 && <span className="text-xs text-muted">({cartCount} items)</span>}
               </h2>
             </div>
 
             <div className="p-5">
               {cart.length === 0 ? (
-                <p className="text-muted text-sm text-center py-8">
-                  No items added yet. Browse the menu to get started.
-                </p>
+                <p className="text-muted text-sm text-center py-8">No items added yet. Browse the menu to get started.</p>
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => (
                     <div key={item.menuItemId} className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-foreground text-sm font-medium truncate">{item.name}</p>
-                        <p className="text-muted text-xs">₹{item.price} × {item.quantity}</p>
+                        <p className="text-muted text-xs">
+                          ₹{item.price} × {item.quantity}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-gold text-sm font-semibold w-16 text-right">
-                          ₹{(item.price * item.quantity).toFixed(2)}
-                        </span>
-                        <button
-                          onClick={() => removeFromCart(item.menuItemId)}
-                          className="text-muted/50 hover:text-red-400 transition-colors"
-                        >
+                        <span className="text-gold text-sm font-semibold w-16 text-right">₹{(item.price * item.quantity).toFixed(2)}</span>
+                        <button onClick={() => removeFromCart(item.menuItemId)} className="text-muted/50 hover:text-red-400 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -524,11 +492,7 @@ function OrderPageInner() {
                       className="w-full bg-background border border-surface-border px-3 py-2 text-sm text-foreground placeholder-muted/50 focus:border-gold focus:outline-none resize-none transition-colors mb-4"
                     />
 
-                    {orderError && (
-                      <div className="mb-3 p-2 bg-red-900/20 border border-red-500/30 text-red-400 text-xs">
-                        {orderError}
-                      </div>
-                    )}
+                    {orderError && <div className="mb-3 p-2 bg-red-900/20 border border-red-500/30 text-red-400 text-xs">{orderError}</div>}
 
                     <button
                       onClick={initiateOrder}
@@ -541,7 +505,11 @@ function OrderPageInner() {
                     {verifiedCode && (
                       <p className="text-green-400 text-[10px] text-center mt-2">
                         <svg className="w-3 h-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                          />
                         </svg>
                         Verified — code accepted
                       </p>
@@ -560,25 +528,25 @@ function OrderPageInner() {
           <div className="bg-surface border border-surface-border w-full max-w-sm">
             <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
               <h2 className="text-foreground font-medium">Enter Order Code</h2>
-              <button onClick={() => setShowOtpModal(false)} className="text-muted hover:text-foreground text-xl">×</button>
+              <button onClick={() => setShowOtpModal(false)} className="text-muted hover:text-foreground text-xl">
+                ×
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div className="text-center">
                 <div className="w-14 h-14 mx-auto border border-gold/30 bg-gold/5 rounded-full flex items-center justify-center mb-3">
                   <svg className="w-7 h-7 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                    />
                   </svg>
                 </div>
-                <p className="text-foreground/70 text-sm">
-                  Enter the 6-digit code sent to your email to verify your order.
-                </p>
+                <p className="text-foreground/70 text-sm">Enter the 6-digit code sent to your email to verify your order.</p>
               </div>
 
-              {otpError && (
-                <div className="p-2 bg-red-900/20 border border-red-500/30 text-red-400 text-xs text-center">
-                  {otpError}
-                </div>
-              )}
+              {otpError && <div className="p-2 bg-red-900/20 border border-red-500/30 text-red-400 text-xs text-center">{otpError}</div>}
 
               <input
                 type="text"
@@ -601,9 +569,7 @@ function OrderPageInner() {
                 {verifyingOtp ? "Verifying..." : "Verify & Place Order"}
               </button>
 
-              <p className="text-muted text-[10px] text-center">
-                The code was sent when you were seated. Ask staff if you need help.
-              </p>
+              <p className="text-muted text-[10px] text-center">The code was sent when you were seated. Ask staff if you need help.</p>
             </div>
           </div>
         </div>

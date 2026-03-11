@@ -20,15 +20,14 @@ export default function Footer() {
   return (
     <footer className="border-t border-gold/20 bg-surface">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-4 gap-12 md:gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-8">
           {/* Brand */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="inline-block hover:opacity-80 transition-opacity duration-300">
               <Logo size={52} />
             </Link>
             <p className="text-foreground/40 text-sm leading-relaxed">
-              Where culinary artistry meets intimate elegance. Experience fine
-              dining at its most refined.
+              Where culinary artistry meets intimate elegance. Experience fine dining at its most refined.
             </p>
             {/* Social Icons */}
             <div className="flex gap-4 pt-2">
@@ -61,16 +60,11 @@ export default function Footer() {
 
           {/* Navigation */}
           <div>
-            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">
-              Navigate
-            </h3>
+            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">Navigate</h3>
             <ul className="space-y-3">
               {footerLinks.navigation.map((link) => (
                 <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="text-foreground/40 hover:text-gold transition-colors duration-300 text-sm"
-                  >
+                  <a href={link.href} className="text-foreground/40 hover:text-gold transition-colors duration-300 text-sm">
                     {link.label}
                   </a>
                 </li>
@@ -80,9 +74,7 @@ export default function Footer() {
 
           {/* Hours */}
           <div>
-            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">
-              Hours
-            </h3>
+            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">Hours</h3>
             <div className="space-y-3 text-sm text-foreground/40">
               <div>
                 <p className="text-foreground/60">Mon — Thu</p>
@@ -101,17 +93,13 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">
-              Stay Connected
-            </h3>
-            <p className="text-foreground/40 text-sm mb-4">
-              Join our list for exclusive events and seasonal menus.
-            </p>
+            <h3 className="text-sm tracking-widest uppercase text-foreground/60 mb-4">Stay Connected</h3>
+            <p className="text-foreground/40 text-sm mb-4">Join our list for exclusive events and seasonal menus.</p>
             <div className="flex">
               <input
                 type="email"
                 placeholder="Your email"
-                className="flex-1 bg-background border border-surface-border px-4 py-2.5 text-sm text-foreground placeholder-foreground/30 focus:border-gold focus:outline-none transition-colors duration-300"
+                className="w-full bg-background border border-surface-border px-4 py-2.5 text-sm text-foreground placeholder-foreground/30 focus:border-gold focus:outline-none transition-colors duration-300"
               />
               <button className="px-4 py-2.5 bg-gold text-background text-sm tracking-wider uppercase hover:bg-gold-light transition-colors duration-300 shrink-0">
                 Join
@@ -122,16 +110,10 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 pt-8 border-t border-surface-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-foreground/30 text-xs tracking-wide">
-            © {new Date().getFullYear()} Percentco. All rights reserved.
-          </p>
+          <p className="text-foreground/30 text-xs tracking-wide">© {new Date().getFullYear()} Percentco. All rights reserved.</p>
           <div className="flex gap-6">
             {footerLinks.legal.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-foreground/30 hover:text-foreground/60 text-xs transition-colors duration-300"
-              >
+              <a key={link.label} href={link.href} className="text-foreground/30 hover:text-foreground/60 text-xs transition-colors duration-300">
                 {link.label}
               </a>
             ))}

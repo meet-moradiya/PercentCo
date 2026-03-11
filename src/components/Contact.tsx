@@ -57,7 +57,7 @@ export default function Contact() {
     "w-full bg-background border border-surface-border px-4 py-3 text-foreground placeholder-foreground/30 focus:border-gold focus:outline-none transition-colors duration-300";
 
   return (
-    <section id="contact" ref={sectionRef} className="py-24 md:py-32 px-6 lg:px-8 bg-surface">
+    <section id="contact" ref={sectionRef} className="pb-12 md:pb-16 px-6 lg:px-8 bg-surface">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <span className="text-gold text-sm tracking-[0.3em] uppercase">Get in Touch</span>
