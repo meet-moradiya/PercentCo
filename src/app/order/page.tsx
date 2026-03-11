@@ -384,7 +384,7 @@ function OrderPageInner() {
           {filteredMenu.length === 0 ? (
             <div className="text-center text-muted py-12">No items in this category.</div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredMenu.map((item) => {
                 const qtyReg = getCartQty(item._id, false);
                 const qtyJain = item.isJainAvailable ? getCartQty(item._id, true) : 0;
@@ -392,94 +392,95 @@ function OrderPageInner() {
                 return (
                   <div
                     key={item._id}
-                    className="bg-surface border border-surface-border p-5 flex flex-col justify-between transition-all hover:border-gold/30"
+                    className="bg-surface border border-surface-border flex flex-col justify-between transition-all hover:border-gold/30 overflow-hidden group"
                   >
-                    <div>
+                    {/* Big Image Top */}
+                    <div className="w-full h-48 overflow-hidden bg-surface-light shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                      />
+                    </div>
+                    
+                    <div className="p-5 flex flex-col flex-1">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <h3 className="text-foreground font-semibold">{item.name}</h3>
                         <span className="text-gold font-bold whitespace-nowrap">₹{item.price}</span>
                       </div>
                       
-                      <div className="flex gap-4 items-start mb-3">
-                        <div className="w-16 h-16 shrink-0 border border-surface-border overflow-hidden rounded bg-surface-light">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover" 
-                          />
+                      <p className="text-muted text-sm line-clamp-2 mb-3 flex-1">{item.description}</p>
+                      
+                      {item.tag && (
+                        <div className="mb-3">
+                          <span className="px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold border border-gold/30 inline-block">
+                            {item.tag}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-muted text-sm line-clamp-2">{item.description}</p>
-                          {item.tag && (
-                            <span className="px-2 py-0.5 mt-2 text-[10px] uppercase tracking-wider text-gold border border-gold/30 inline-block">
-                              {item.tag}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                      )}
                     
-                    <div className="mt-3 space-y-2">
-                       {/* Regular Option */}
-                       <div className="flex items-center justify-between">
-                         {item.isJainAvailable && <span className="text-sm text-foreground/80">Regular</span>}
-                         {qtyReg === 0 ? (
-                            <button
-                              onClick={() => addToCart(item, false)}
-                              className={`py-1.5 px-4 border border-gold text-gold text-xs tracking-wider uppercase hover:bg-gold hover:text-background transition-all ${!item.isJainAvailable ? "w-full" : ""}`}
-                            >
-                              Add{item.isJainAvailable ? "" : " to Order"}
-                            </button>
-                          ) : (
-                            <div className="flex items-center justify-between w-24">
+                      <div className="mt-4 space-y-2 pt-4 border-t border-surface-border/50">
+                         {/* Regular Option */}
+                         <div className="flex items-center justify-between">
+                           {item.isJainAvailable && <span className="text-sm text-foreground/80 font-medium">Regular</span>}
+                           {qtyReg === 0 ? (
                               <button
-                                onClick={() => updateQuantity(`${item._id}-reg`, -1)}
-                                className="w-7 h-7 flex items-center justify-center border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+                                onClick={() => addToCart(item, false)}
+                                className={`py-1.5 px-4 border border-gold text-gold text-xs tracking-wider uppercase hover:bg-gold hover:text-background transition-all ${!item.isJainAvailable ? "w-full" : ""}`}
                               >
-                                −
-                              </button>
-                              <span className="text-foreground text-sm font-bold">{qtyReg}</span>
-                              <button
-                                onClick={() => updateQuantity(`${item._id}-reg`, 1)}
-                                className="w-7 h-7 flex items-center justify-center border border-gold text-gold hover:bg-gold hover:text-background transition-all"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                       </div>
-                       
-                       {/* Jain Option */}
-                       {item.isJainAvailable && (
-                         <div className="flex items-center justify-between pt-2 border-t border-surface-border/50">
-                           <span className="text-sm text-green-400 font-medium">Jain Preparation</span>
-                           {qtyJain === 0 ? (
-                              <button
-                                onClick={() => addToCart(item, true)}
-                                className="py-1.5 px-4 border border-green-500/50 text-green-400 text-xs tracking-wider uppercase hover:bg-green-500 hover:text-background transition-all"
-                              >
-                                Add
+                                Add{item.isJainAvailable ? "" : " to Order"}
                               </button>
                             ) : (
                               <div className="flex items-center justify-between w-24">
                                 <button
-                                  onClick={() => updateQuantity(`${item._id}-jain`, -1)}
+                                  onClick={() => updateQuantity(`${item._id}-reg`, -1)}
                                   className="w-7 h-7 flex items-center justify-center border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
                                 >
                                   −
                                 </button>
-                                <span className="text-foreground text-sm font-bold">{qtyJain}</span>
+                                <span className="text-foreground text-sm font-bold">{qtyReg}</span>
                                 <button
-                                  onClick={() => updateQuantity(`${item._id}-jain`, 1)}
-                                  className="w-7 h-7 flex items-center justify-center border border-green-500/50 text-green-400 hover:bg-green-500 hover:text-background transition-all"
+                                  onClick={() => updateQuantity(`${item._id}-reg`, 1)}
+                                  className="w-7 h-7 flex items-center justify-center border border-gold text-gold hover:bg-gold hover:text-background transition-all"
                                 >
                                   +
                                 </button>
                               </div>
                             )}
                          </div>
-                       )}
+                         
+                         {/* Jain Option */}
+                         {item.isJainAvailable && (
+                           <div className="flex items-center justify-between pt-2">
+                             <span className="text-sm text-green-400 font-medium">Jain Prep</span>
+                             {qtyJain === 0 ? (
+                                <button
+                                  onClick={() => addToCart(item, true)}
+                                  className="py-1.5 px-4 border border-green-500/50 text-green-400 text-xs tracking-wider uppercase hover:bg-green-500 hover:text-background transition-all"
+                                >
+                                  Add
+                                </button>
+                              ) : (
+                                <div className="flex items-center justify-between w-24">
+                                  <button
+                                    onClick={() => updateQuantity(`${item._id}-jain`, -1)}
+                                    className="w-7 h-7 flex items-center justify-center border border-surface-border text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="text-foreground text-sm font-bold">{qtyJain}</span>
+                                  <button
+                                    onClick={() => updateQuantity(`${item._id}-jain`, 1)}
+                                    className="w-7 h-7 flex items-center justify-center border border-green-500/50 text-green-400 hover:bg-green-500 hover:text-background transition-all"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              )}
+                           </div>
+                         )}
+                      </div>
                     </div>
                   </div>
                 );

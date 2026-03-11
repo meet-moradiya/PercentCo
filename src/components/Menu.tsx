@@ -129,49 +129,52 @@ export default function Menu() {
         </div>
 
         {/* Menu Items Grid */}
-        <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuData[active].map((item, i) => (
             <div
               key={item._id || item.name}
-              className="group border-b border-surface-border pb-6 hover:border-gold/30 transition-colors duration-300"
+              className="group border border-surface-border overflow-hidden hover:border-gold/30 transition-colors duration-300 bg-surface-light/30 flex flex-col"
               style={{ animationDelay: `${i * 100}ms` }}
             >
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex gap-4 flex-1">
-                  {/* Image Thumbnail */}
-                  <div className="w-20 h-20 shrink-0 border border-surface-border overflow-hidden rounded bg-surface-light hidden sm:block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    />
+              {/* Large Image Top */}
+              <div className="w-full h-64 overflow-hidden bg-surface-light shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
+                  alt={item.name} 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
+              </div>
+
+              {/* Card Content */}
+              <div className="p-6 flex flex-col flex-1">
+                <div className="flex justify-between items-start gap-4 mb-3">
+                  <div className="flex items-center gap-2 flex-wrap flex-1">
+                    <h3 className="font-display text-2xl group-hover:text-gold transition-colors duration-300">
+                      {item.name}
+                    </h3>
                   </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="font-display text-xl group-hover:text-gold transition-colors duration-300">
-                        {item.name}
-                      </h3>
-                      {item.tag && (
-                        <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 border border-gold/50 text-gold">
-                          {item.tag}
-                        </span>
-                      )}
-                      {item.isJainAvailable && (
-                         <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider">
-                           Jain Opt
-                         </span>
-                      )}
-                    </div>
-                    <p className="text-foreground/40 text-sm mt-2 leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
+                  <span className="font-display text-2xl text-gold shrink-0">
+                    {item.price}
+                  </span>
                 </div>
-                <span className="font-display text-xl text-gold shrink-0">
-                  {item.price}
-                </span>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {item.tag && (
+                    <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 border border-gold/50 text-gold">
+                      {item.tag}
+                    </span>
+                  )}
+                  {item.isJainAvailable && (
+                     <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider">
+                       Jain Opt
+                     </span>
+                  )}
+                </div>
+
+                <p className="text-foreground/60 text-sm leading-relaxed flex-1">
+                  {item.description}
+                </p>
               </div>
             </div>
           ))}
