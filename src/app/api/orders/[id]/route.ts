@@ -25,7 +25,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    const updateData: Record<string, unknown> = { status };
+    if (status === "served") {
+      updateData.completedAt = new Date();
+    }
+
+    const order = await Order.findByIdAndUpdate(id, updateData, { new: true });
 
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });

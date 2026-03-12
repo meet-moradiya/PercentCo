@@ -39,51 +39,51 @@ const THEMES: Record<PdfTheme, ThemeColors> = {
  * Renders multi-language text onto a canvas and returns it as a data URL.
  * Canvas natively supports all Unicode via system fonts (Hindi, Gujarati, etc.)
  */
-function renderTextAsImage(
-  text: string,
-  maxWidthPx: number,
-  color: string,
-  fontSize: number = 28
-): string {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
+// function renderTextAsImage(
+//   text: string,
+//   maxWidthPx: number,
+//   color: string,
+//   fontSize: number = 28
+// ): string {
+//   const canvas = document.createElement("canvas");
+//   const ctx = canvas.getContext("2d")!;
 
-  // Use system fonts that support Devanagari, Gujarati, etc.
-  const fontStack = `${fontSize}px 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Gujarati', system-ui, sans-serif`;
-  ctx.font = fontStack;
+//   // Use system fonts that support Devanagari, Gujarati, etc.
+//   const fontStack = `${fontSize}px 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Gujarati', system-ui, sans-serif`;
+//   ctx.font = fontStack;
 
-  // Word-wrap and measure
-  const lines: string[] = [];
-  const words = text.split(" ");
-  let currentLine = "";
-  for (const word of words) {
-    const test = currentLine ? currentLine + " " + word : word;
-    if (ctx.measureText(test).width > maxWidthPx && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = test;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
+//   // Word-wrap and measure
+//   const lines: string[] = [];
+//   const words = text.split(" ");
+//   let currentLine = "";
+//   for (const word of words) {
+//     const test = currentLine ? currentLine + " " + word : word;
+//     if (ctx.measureText(test).width > maxWidthPx && currentLine) {
+//       lines.push(currentLine);
+//       currentLine = word;
+//     } else {
+//       currentLine = test;
+//     }
+//   }
+//   if (currentLine) lines.push(currentLine);
 
-  const lineHeight = fontSize * 1.5;
-  canvas.width = maxWidthPx + 40;
-  canvas.height = Math.max(lines.length * lineHeight + 20, lineHeight + 20);
+//   const lineHeight = fontSize * 1.5;
+//   canvas.width = maxWidthPx + 40;
+//   canvas.height = Math.max(lines.length * lineHeight + 20, lineHeight + 20);
 
-  // Re-set font after resize
-  ctx.font = fontStack;
-  ctx.fillStyle = color;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+//   // Re-set font after resize
+//   ctx.font = fontStack;
+//   ctx.fillStyle = color;
+//   ctx.textAlign = "center";
+//   ctx.textBaseline = "top";
 
-  const cx = canvas.width / 2;
-  lines.forEach((line, i) => {
-    ctx.fillText(line, cx, 10 + i * lineHeight);
-  });
+//   const cx = canvas.width / 2;
+//   lines.forEach((line, i) => {
+//     ctx.fillText(line, cx, 10 + i * lineHeight);
+//   });
 
-  return canvas.toDataURL("image/png");
-}
+//   return canvas.toDataURL("image/png");
+// }
 
 export const generateTablePdf = async (
   tableNumber: number,

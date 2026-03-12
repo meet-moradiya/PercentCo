@@ -4,7 +4,8 @@ import { useState, useEffect, FormEvent } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   date: string;
@@ -54,7 +55,8 @@ export default function Reservation() {
   const [allTimeSlots, setAllTimeSlots] = useState<string[]>([]);
   const [closedDates, setClosedDates] = useState<{ date: string; reason: string }[]>([]);
   const [formData, setFormData] = useState<FormData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     date: "",
@@ -103,7 +105,8 @@ export default function Reservation() {
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -216,7 +219,7 @@ export default function Reservation() {
           </div>
           <h2 className="font-display text-4xl text-gold">Reservation Confirmed</h2>
           <p className="text-foreground/60 text-lg">
-            Thank you, {formData.name}. We&apos;ve reserved your table for <span className="text-gold">{formData.guests} guests</span> on{" "}
+            Thank you, {formData.firstName}. We&apos;ve reserved your table for <span className="text-gold">{formData.guests} guests</span> on{" "}
             <span className="text-gold">{formData.date}</span> at <span className="text-gold">{formData.time}</span>.
           </p>
           <p className="text-foreground/40 text-sm">A confirmation has been sent to {formData.email}. We look forward to welcoming you.</p>
@@ -224,7 +227,8 @@ export default function Reservation() {
             onClick={() => {
               setSubmitted(false);
               setFormData({
-                name: "",
+                firstName: "",
+                lastName: "",
                 email: "",
                 phone: "",
                 date: "",
@@ -260,20 +264,36 @@ export default function Reservation() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} noValidate className="grid md:grid-cols-2 gap-6">
-          {/* Name */}
+          {/* First Name */}
           <div>
-            <label htmlFor="res-name" className="block text-sm text-foreground/50 mb-2 tracking-wider uppercase">
-              Full Name *
+            <label htmlFor="res-firstName" className="block text-sm text-foreground/50 mb-2 tracking-wider uppercase">
+              First Name *
             </label>
             <input
-              id="res-name"
+              id="res-firstName"
               type="text"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              className={inputClass("name")}
+              placeholder="John"
+              value={formData.firstName}
+              onChange={(e) => handleChange("firstName", e.target.value)}
+              className={inputClass("firstName")}
             />
-            {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+            {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <label htmlFor="res-lastName" className="block text-sm text-foreground/50 mb-2 tracking-wider uppercase">
+              Last Name *
+            </label>
+            <input
+              id="res-lastName"
+              type="text"
+              placeholder="Doe"
+              value={formData.lastName}
+              onChange={(e) => handleChange("lastName", e.target.value)}
+              className={inputClass("lastName")}
+            />
+            {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
           </div>
 
           {/* Email */}

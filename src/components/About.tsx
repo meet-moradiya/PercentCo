@@ -24,7 +24,7 @@ export default function About() {
           <div className="absolute -bottom-4 -right-4 w-full h-full border border-gold/30 -z-10" />
           {/* Experience badge */}
           <div className="absolute -bottom-6 -left-6 bg-gold text-background p-6 flex flex-col items-center justify-center">
-            <span className="font-(family-name:--font-display) text-3xl font-bold">8+</span>
+            <span className="font-display text-3xl font-bold">8+</span>
             <span className="text-xs tracking-widest uppercase">Years</span>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function About() {
         <div className="space-y-6">
           <div className="space-y-2">
             <span className="text-gold text-sm tracking-[0.3em] uppercase">Our Story</span>
-            <h2 className="font-(family-name:--font-display) text-4xl md:text-5xl leading-tight">
+            <h2 className="font-display text-4xl md:text-5xl leading-tight">
               Where Passion
               <br />
               Meets the Plate
@@ -54,7 +54,7 @@ export default function About() {
 
           {/* Quote */}
           <blockquote className="border-l-2 border-gold pl-6 py-2">
-            <p className="font-(family-name:--font-display) text-xl italic text-gold-light">
+            <p className="font-display text-xl italic text-gold-light">
               &quot;Cooking is an act of love, a gift, a way of sharing a moment of happiness.&quot;
             </p>
             <cite className="text-sm text-foreground/50 not-italic mt-2 block">— Chef Marcus Caldwell, Founder</cite>
@@ -68,7 +68,7 @@ export default function About() {
               { value: "15K+", label: "Happy Guests" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="font-(family-name:--font-display) text-2xl md:text-3xl text-gold">{stat.value}</div>
+                <div className="font-display text-2xl md:text-3xl text-gold">{stat.value}</div>
                 <div className="text-xs tracking-widest uppercase text-foreground/50 mt-1">{stat.label}</div>
               </div>
             ))}

@@ -43,8 +43,17 @@ export async function PATCH(
       }
       update.status = status;
 
+      // Auto-set seatedAt timestamp when seated
+      if (status === "seated" && !reservation.seatedAt) {
+        update.seatedAt = new Date();
+      }
+
       // Auto-clear table when completing, cancelling, or marking no-show
       if (["completed", "cancelled", "no-show"].includes(status)) {
+        // Auto-set completedAt timestamp when completed
+        if (status === "completed") {
+          update.completedAt = new Date();
+        }
         // Deactivate OTP codes for this table — table is now free
         if (reservation.tableNumber) {
           await TableCode.updateMany(

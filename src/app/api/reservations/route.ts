@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    const { name, email, phone, date, time, guests, occasion, requests } = body;
+    const { firstName, lastName, email, phone, date, time, guests, occasion, requests } = body;
 
     // Validation
-    if (!name || !email || !phone || !date || !time) {
-      return NextResponse.json({ error: "Required fields: name, email, phone, date, time" }, { status: 400 });
+    if (!firstName || !email || !phone || !date || !time) {
+      return NextResponse.json({ error: "Required fields: firstName, email, phone, date, time" }, { status: 400 });
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -115,7 +115,8 @@ export async function POST(req: NextRequest) {
     }
 
     const reservation = await Reservation.create({
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: (lastName || "").trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
       date,

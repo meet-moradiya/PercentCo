@@ -35,7 +35,8 @@ export default function AdminDashboard() {
 
   // Walk-in state
   const [showWalkin, setShowWalkin] = useState(false);
-  const [walkinName, setWalkinName] = useState("");
+  const [walkinFirstName, setWalkinFirstName] = useState("");
+  const [walkinLastName, setWalkinLastName] = useState("");
   const [walkinPhone, setWalkinPhone] = useState("");
   const [walkinEmail, setWalkinEmail] = useState("");
   const [walkinGuests, setWalkinGuests] = useState(2);
@@ -237,7 +238,8 @@ export default function AdminDashboard() {
 
   const openWalkin = () => {
     setShowWalkin(true);
-    setWalkinName("");
+    setWalkinFirstName("");
+    setWalkinLastName("");
     setWalkinPhone("");
     setWalkinEmail("");
     setWalkinGuests(2);
@@ -254,7 +256,8 @@ export default function AdminDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: walkinName || "Walk-in Guest",
+          firstName: walkinFirstName || "Walk-in",
+          lastName: walkinLastName || "Guest",
           phone: walkinPhone,
           email: walkinEmail,
           guests: walkinGuests,
@@ -429,16 +432,29 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Guest Name</label>
+                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">First Name *</label>
                   <input
                     type="text"
-                    value={walkinName}
-                    onChange={(e) => setWalkinName(e.target.value)}
-                    placeholder="Walk-in Guest"
+                    value={walkinFirstName}
+                    onChange={(e) => setWalkinFirstName(e.target.value)}
+                    placeholder="First Name"
                     className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground placeholder-muted/50 focus:border-gold focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
+                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Last Name *</label>
+                  <input
+                    type="text"
+                    value={walkinLastName}
+                    onChange={(e) => setWalkinLastName(e.target.value)}
+                    placeholder="Last Name"
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground placeholder-muted/50 focus:border-gold focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
                   <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Email *</label>
                   <input
                     type="email"
@@ -452,7 +468,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Phone (optional)</label>
+                  <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Phone *</label>
                   <input
                     type="tel"
                     value={walkinPhone}

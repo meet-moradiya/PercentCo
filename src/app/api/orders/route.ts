@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import Reservation from "@/models/Reservation";
 import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
 import { verifyTableCode } from "@/lib/email";
@@ -72,13 +73,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Look up active reservation on this table for auto-linking
+    const today = new Date().toISOString().split("T")[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const activeReservation: any = await Reservation.findOne({
+      tableNumber: Number(tableNumber),
+      date: today,
+      status: { $in: ["seated", "confirmed"] },
+    }).lean();
+
+    const reservationId = activeReservation?._id || null;
+    const customerId = activeReservation?.phone || "walk-in";
+    const resolvedCustomerName = customerName?.trim() || (activeReservation?.name) || "Guest";
+
     const order = await Order.create({
       tableNumber: Number(tableNumber),
-      customerName: customerName?.trim() || "Guest",
+      customerName: resolvedCustomerName,
       items: validatedItems,
       total: Math.round(total * 100) / 100,
       notes: notes || "",
       status: "pending",
+      reservationId,
+      customerId,
     });
 
     return NextResponse.json(

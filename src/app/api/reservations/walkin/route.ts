@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const { name, phone, email, guests, tableNumber } = await req.json();
+    const { firstName, lastName, phone, email, guests, tableNumber } = await req.json();
 
     if (!guests || !tableNumber) {
       return NextResponse.json(
@@ -101,8 +101,12 @@ export async function POST(req: NextRequest) {
     const displayHour = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
     const timeStr = `${displayHour}:${minutes.toString().padStart(2, "0")} ${ampm}`;
 
+    const walkinFirstName = firstName || "Walk-in";
+    const walkinLastName = lastName || "Guest";
+
     const reservation = await Reservation.create({
-      name: name || "Walk-in Guest",
+      firstName: walkinFirstName,
+      lastName: walkinLastName,
       email: email?.trim().toLowerCase() || "walkin@percentco.com",
       phone: phone || "—",
       date: today,
@@ -112,6 +116,7 @@ export async function POST(req: NextRequest) {
       requests: "Walk-in customer",
       status: "seated",
       tableNumber,
+      seatedAt: new Date(),
     });
 
     // Generate OTP and send to email
@@ -122,7 +127,7 @@ export async function POST(req: NextRequest) {
         orderCode = await createAndSendTableCode(
           tableNumber,
           customerEmail,
-          name || "Walk-in Guest"
+          `${walkinFirstName} ${walkinLastName}`
         );
       } catch (emailErr) {
         console.error("Failed to send OTP email for walk-in:", emailErr);
