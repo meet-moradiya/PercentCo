@@ -186,6 +186,9 @@ export default function InsightsPage() {
   const [hourlyFilter, setHourlyFilter] = useState("today");
   const [hourlyDate, setHourlyDate] = useState("");
 
+  const [peakTimeFilter, setPeakTimeFilter] = useState("today");
+  const [peakTimeDate, setPeakTimeDate] = useState("");
+
   const [menuPieMetric, setMenuPieMetric] = useState("revenue");
   const [menuPieType, setMenuPieType] = useState("all");
   const [menuPopularType, setMenuPopularType] = useState("all");
@@ -259,7 +262,13 @@ export default function InsightsPage() {
         }
         break;
       case "reservations":
-        fetchSection("reservations", { filter }).then(setReservationData);
+        {
+          const rParams: Record<string, string> = { filter, peakFilter: peakTimeFilter };
+          if (peakTimeFilter === "custom" && peakTimeDate) {
+            rParams.peakDate = peakTimeDate;
+          }
+          fetchSection("reservations", rParams).then(setReservationData);
+        }
         break;
       case "customers":
         fetchSection("customers").then(setCustomerData);
@@ -289,6 +298,8 @@ export default function InsightsPage() {
     customToDate,
     hourlyFilter,
     hourlyDate,
+    peakTimeFilter,
+    peakTimeDate,
     fetchSection,
   ]);
 
@@ -950,7 +961,34 @@ export default function InsightsPage() {
 
                     {/* Peak Times */}
                     <div className="bg-surface border border-surface-border p-6">
-                      <h3 className="text-foreground font-medium mb-6">Peak Reservation Times</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <h3 className="text-foreground font-medium">Peak Reservation Times</h3>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <FilterPills
+                            options={[
+                              { value: "today", label: "Today" },
+                              { value: "yesterday", label: "Yesterday" },
+                              { value: "custom", label: "Custom" },
+                            ]}
+                            selected={peakTimeFilter}
+                            onChange={setPeakTimeFilter}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Specific Date input */}
+                      {peakTimeFilter === "custom" && (
+                        <div className="flex items-center gap-3 justify-end mb-4">
+                          <label className="text-muted text-xs tracking-wider uppercase">Date</label>
+                          <input
+                            type="date"
+                            value={peakTimeDate}
+                            onChange={(e) => setPeakTimeDate(e.target.value)}
+                            className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
+                          />
+                        </div>
+                      )}
+
                       {reservationData.peakTimes.length === 0 ? (
                         <div className="text-muted text-sm text-center py-12">No reservation data.</div>
                       ) : (

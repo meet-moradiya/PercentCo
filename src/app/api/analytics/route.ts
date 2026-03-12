@@ -112,7 +112,18 @@ export async function GET(req: NextRequest) {
       case "menu":
         return await getMenuPerformance(searchParams, dateRange);
       case "reservations":
-        return await getReservationAnalytics(dateRange);
+        {
+          const peakFilter = searchParams.get("peakFilter") || "today";
+          const peakDate = searchParams.get("peakDate");
+          let peakDateRange = getDateRange(peakFilter);
+          if (peakFilter === "custom" && peakDate) {
+            peakDateRange = {
+              start: new Date(peakDate + "T00:00:00"),
+              end: new Date(peakDate + "T23:59:59.999"),
+            };
+          }
+          return await getReservationAnalytics(dateRange, peakDateRange);
+        }
       case "customers":
         return await getCustomerAnalytics(dateRange);
       case "orders":
@@ -443,7 +454,7 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
 // =============================================
 // SECTION 4: RESERVATION ANALYTICS
 // =============================================
-async function getReservationAnalytics(dateRange: { start: Date; end: Date }) {
+async function getReservationAnalytics(dateRange: { start: Date; end: Date }, peakDateRange: { start: Date; end: Date }) {
   const startStr = getDateStr(dateRange.start);
   const endStr = getDateStr(dateRange.end);
 
@@ -467,26 +478,68 @@ async function getReservationAnalytics(dateRange: { start: Date; end: Date }) {
     count,
   }));
 
-  // Peak reservation time
-  const timeCounts: Record<string, number> = {};
-  for (const r of reservations) {
-    const time = (r as Record<string, unknown>).time as string;
-    timeCounts[time] = (timeCounts[time] || 0) + 1;
+  // Peak reservation time (specific to peakDateRange, 15 min slots)
+  const Settings = (await import("@/models/Settings")).default;
+  const settings = await Settings.findOne();
+  const openTimeStr = settings?.openTime || "11:00";
+  const closeTimeStr = settings?.closeTime || "23:00";
+
+  const parseTime24 = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  
+  let startMins = parseTime24(openTimeStr);
+  let endMins = parseTime24(closeTimeStr);
+  if (endMins <= startMins) endMins += 24 * 60; // Handles closing after midnight
+
+  const formatMins = (mins: number) => {
+    let h = Math.floor(mins / 60) % 24;
+    let m = mins % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const peakTimesMap: Record<string, number> = {};
+  for (let m = startMins; m <= endMins; m += 15) {
+    peakTimesMap[formatMins(m)] = 0;
   }
 
-  // Sort by time
-  const parseTimeSort = (t: string): number => {
+  const peakStartStr = getDateStr(peakDateRange.start);
+  const peakEndStr = getDateStr(peakDateRange.end);
+  const peakReservations = await Reservation.find({
+    date: { $gte: peakStartStr, $lte: peakEndStr },
+  }).lean();
+
+  const parseTime12 = (t: string): number => {
     const match = t.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
-    if (!match) return 0;
+    if (!match) return -1;
     let h = parseInt(match[1]);
     if (match[3].toUpperCase() === "PM" && h !== 12) h += 12;
     if (match[3].toUpperCase() === "AM" && h === 12) h = 0;
     return h * 60 + parseInt(match[2]);
   };
 
-  const peakTimes = Object.entries(timeCounts)
-    .map(([time, count]) => ({ time, count }))
-    .sort((a, b) => parseTimeSort(a.time) - parseTimeSort(b.time));
+  for (const r of peakReservations) {
+    const time = (r as Record<string, unknown>).time as string;
+    if (!time) continue;
+    
+    let rMins = parseTime12(time);
+    if (rMins >= 0) {
+      if (rMins < startMins && rMins <= endMins - 24 * 60) {
+        rMins += 24 * 60; // Shift past midnight if applicable
+      }
+      const rounded = Math.round(rMins / 15) * 15;
+      const formatted = formatMins(rounded);
+      if (peakTimesMap[formatted] !== undefined) {
+        peakTimesMap[formatted]++;
+      }
+    }
+  }
+
+  const peakTimes = Object.entries(peakTimesMap).map(([time, count]) => ({ time, count }));
 
   return NextResponse.json({
     success: true,
