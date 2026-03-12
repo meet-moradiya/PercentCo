@@ -7,22 +7,8 @@ import dynamic from "next/dynamic";
 const LazyCharts = dynamic(
   () =>
     import("recharts").then((mod) => {
-      const {
-        ResponsiveContainer,
-        LineChart,
-        Line,
-        BarChart,
-        Bar,
-        PieChart,
-        Pie,
-        Cell,
-        XAxis,
-        YAxis,
-        Tooltip,
-        CartesianGrid,
-        Legend,
-      } = mod;
-      
+      const { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid, Legend } = mod;
+
       // Return a component that provides all chart components as render prop
       const ChartProvider = ({ children }: { children: (charts: typeof chartComponents) => React.ReactNode }) => {
         return <>{children(chartComponents)}</>;
@@ -46,13 +32,17 @@ const LazyCharts = dynamic(
 
       return ChartProvider;
     }),
-  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center"><div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      </div>
+    ),
+  },
 );
 
-const CHART_COLORS = [
-  "#c9a96e", "#60a5fa", "#34d399", "#f87171", "#a78bfa",
-  "#fbbf24", "#f472b6", "#38bdf8", "#4ade80", "#fb923c",
-];
+const CHART_COLORS = ["#c9a96e", "#60a5fa", "#34d399", "#f87171", "#a78bfa", "#fbbf24", "#f472b6", "#38bdf8", "#4ade80", "#fb923c"];
 
 const PIE_COLORS = ["#c9a96e", "#60a5fa", "#34d399", "#f87171", "#a78bfa", "#fbbf24", "#f472b6"];
 
@@ -70,7 +60,11 @@ const tabs: Tab[] = [
     label: "Overview",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+        />
       </svg>
     ),
   },
@@ -79,7 +73,11 @@ const tabs: Tab[] = [
     label: "Revenue",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
+        />
       </svg>
     ),
   },
@@ -88,7 +86,11 @@ const tabs: Tab[] = [
     label: "Menu",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+        />
       </svg>
     ),
   },
@@ -97,7 +99,11 @@ const tabs: Tab[] = [
     label: "Reservations",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+        />
       </svg>
     ),
   },
@@ -106,7 +112,11 @@ const tabs: Tab[] = [
     label: "Customers",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+        />
       </svg>
     ),
   },
@@ -115,7 +125,11 @@ const tabs: Tab[] = [
     label: "Orders",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
+        />
       </svg>
     ),
   },
@@ -124,7 +138,11 @@ const tabs: Tab[] = [
     label: "Occasions",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+        />
       </svg>
     ),
   },
@@ -165,6 +183,13 @@ export default function InsightsPage() {
   const [menuCustomFrom, setMenuCustomFrom] = useState("");
   const [menuCustomTo, setMenuCustomTo] = useState("");
 
+  const [hourlyFilter, setHourlyFilter] = useState("today");
+  const [hourlyDate, setHourlyDate] = useState("");
+
+  const [menuPieMetric, setMenuPieMetric] = useState("revenue");
+  const [menuPieType, setMenuPieType] = useState("all");
+  const [menuPopularType, setMenuPopularType] = useState("all");
+
   // Data states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [overviewData, setOverviewData] = useState<any>(null);
@@ -182,23 +207,20 @@ export default function InsightsPage() {
   const [occasionData, setOccasionData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchSection = useCallback(
-    async (section: string, params: Record<string, string> = {}) => {
-      setLoading(true);
-      try {
-        const query = new URLSearchParams({ section, ...params });
-        const res = await fetch(`/api/analytics?${query}`);
-        const json = await res.json();
-        if (json.success) return json.data;
-      } catch (err) {
-        console.error(`Analytics fetch error (${section}):`, err);
-      } finally {
-        setLoading(false);
-      }
-      return null;
-    },
-    []
-  );
+  const fetchSection = useCallback(async (section: string, params: Record<string, string> = {}) => {
+    setLoading(true);
+    try {
+      const query = new URLSearchParams({ section, ...params });
+      const res = await fetch(`/api/analytics?${query}`);
+      const json = await res.json();
+      if (json.success) return json.data;
+    } catch (err) {
+      console.error(`Analytics fetch error (${section}):`, err);
+    } finally {
+      setLoading(false);
+    }
+    return null;
+  }, []);
 
   // Load data based on active tab
   useEffect(() => {
@@ -208,18 +230,26 @@ export default function InsightsPage() {
         break;
       case "revenue":
         {
-          const params: Record<string, string> = { filter: revenueFilter, mode: revenueMetric };
+          const params: Record<string, string> = { filter: revenueFilter, mode: revenueMetric, hourlyFilter };
           if (revenueFilter === "custom" && customFromDate && customToDate) {
             params.from = customFromDate;
             params.to = customToDate;
+          }
+          if (hourlyFilter === "custom" && hourlyDate) {
+            params.hourlyDate = hourlyDate;
           }
           fetchSection("revenue", params).then(setRevenueData);
         }
         break;
       case "menu":
         {
-          const menuParams: Record<string, string> = { 
-            page: String(menuPage), sort: menuSort, dir: menuDir, category: menuCategory, filter: menuTimeFilter 
+          const menuParams: Record<string, string> = {
+            page: String(menuPage),
+            sort: menuSort,
+            dir: menuDir,
+            category: menuCategory,
+            filter: menuTimeFilter,
+            type: menuPopularType,
           };
           if (menuTimeFilter === "custom" && menuCustomFrom && menuCustomTo) {
             menuParams.from = menuCustomFrom;
@@ -241,7 +271,26 @@ export default function InsightsPage() {
         fetchSection("occasions").then(setOccasionData);
         break;
     }
-  }, [activeTab, filter, revenueFilter, revenueMetric, revenueMode, menuPage, menuSort, menuDir, menuCategory, menuTimeFilter, menuCustomFrom, menuCustomTo, customFromDate, customToDate, fetchSection]);
+  }, [
+    activeTab,
+    filter,
+    revenueFilter,
+    revenueMetric,
+    revenueMode,
+    menuPage,
+    menuSort,
+    menuDir,
+    menuCategory,
+    menuTimeFilter,
+    menuCustomFrom,
+    menuCustomTo,
+    menuPopularType,
+    customFromDate,
+    customToDate,
+    hourlyFilter,
+    hourlyDate,
+    fetchSection,
+  ]);
 
   const KPICard = ({
     label,
@@ -281,9 +330,7 @@ export default function InsightsPage() {
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={`px-4 py-1.5 text-xs tracking-wider uppercase transition-all border-r border-surface-border last:border-r-0 ${
-            selected === opt.value
-              ? "bg-gold text-background font-semibold"
-              : "text-muted hover:bg-surface-light hover:text-foreground"
+            selected === opt.value ? "bg-gold text-background font-semibold" : "text-muted hover:bg-surface-light hover:text-foreground"
           }`}
         >
           {opt.label}
@@ -323,9 +370,7 @@ export default function InsightsPage() {
     <div className="animate-in fade-in duration-500">
       <div className="mb-8">
         <h1 className="text-2xl text-foreground font-semibold">Insights & Analytics</h1>
-        <p className="text-muted text-sm mt-1">
-          Comprehensive data-driven insights for restaurant performance.
-        </p>
+        <p className="text-muted text-sm mt-1">Comprehensive data-driven insights for restaurant performance.</p>
       </div>
 
       {/* Tabs */}
@@ -335,9 +380,7 @@ export default function InsightsPage() {
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-3 text-sm tracking-wider uppercase border-b-2 transition-all -mb-px flex items-center justify-center gap-2 whitespace-nowrap ${
-              activeTab === t.id
-                ? "border-gold text-gold"
-                : "border-transparent text-muted hover:text-foreground"
+              activeTab === t.id ? "border-gold text-gold" : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             {t.icon}
@@ -386,12 +429,7 @@ export default function InsightsPage() {
                     color="text-green-400"
                     subtext={`Of all customers return`}
                   />
-                  <KPICard
-                    label="Table Utilization"
-                    value={`${overviewData.tableUtilPct}%`}
-                    color="text-purple-400"
-                    subtext="Tables used today"
-                  />
+                  <KPICard label="Table Utilization" value={`${overviewData.tableUtilPct}%`} color="text-purple-400" subtext="Tables used today" />
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -414,7 +452,7 @@ export default function InsightsPage() {
                     subtext="Average minutes per visit"
                   />
                   <KPICard
-                    label="Top Selling Today"
+                    label="Top Selling"
                     value={overviewData.topSellingItem?.name || "—"}
                     color="text-gold"
                     subtext={overviewData.topSellingItem ? `${overviewData.topSellingItem.count} orders` : "No orders yet"}
@@ -476,9 +514,7 @@ export default function InsightsPage() {
                   <>
                     {/* Revenue/Orders Over Time — single metric */}
                     <div className="bg-surface border border-surface-border p-6">
-                      <h3 className="text-foreground font-medium mb-6">
-                        {revenueMetric === "revenue" ? "Revenue" : "Orders"} Over Time
-                      </h3>
+                      <h3 className="text-foreground font-medium mb-6">{revenueMetric === "revenue" ? "Revenue" : "Orders"} Over Time</h3>
                       {revenueData.revenueOverTime.length === 0 ? (
                         <div className="text-muted text-sm text-center py-12">No data for this period.</div>
                       ) : (
@@ -486,8 +522,17 @@ export default function InsightsPage() {
                           <Charts.ResponsiveContainer width="100%" height="100%">
                             <Charts.LineChart data={revenueData.revenueOverTime}>
                               <Charts.CartesianGrid stroke="#2a2a2a" strokeDasharray="3 3" />
-                              <Charts.XAxis dataKey="date" stroke="#888" tick={{ fontSize: 11 }} tickFormatter={(v: string) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })} />
-                              <Charts.YAxis stroke="#888" tick={{ fontSize: 11 }} tickFormatter={revenueMetric === "revenue" ? (v: number) => `₹${v}` : undefined} />
+                              <Charts.XAxis
+                                dataKey="date"
+                                stroke="#888"
+                                tick={{ fontSize: 11 }}
+                                tickFormatter={(v: string) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              />
+                              <Charts.YAxis
+                                stroke="#888"
+                                tick={{ fontSize: 11 }}
+                                tickFormatter={revenueMetric === "revenue" ? (v: number) => `₹${v}` : undefined}
+                              />
                               <Charts.Tooltip content={<CustomTooltip />} />
                               <Charts.Line
                                 type="monotone"
@@ -506,22 +551,40 @@ export default function InsightsPage() {
 
                     {/* Revenue by Hour */}
                     <div className="bg-surface border border-surface-border p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <h3 className="text-foreground font-medium">Revenue by Hour</h3>
-                        <div className="flex bg-background border border-surface-border rounded-sm overflow-hidden">
-                          <button
-                            onClick={() => setRevenueMode("revenue")}
-                            className={`px-4 py-1.5 text-xs tracking-wider uppercase ${revenueMode === "revenue" ? "bg-gold text-background font-semibold" : "text-muted hover:bg-surface-light"}`}
-                          >
-                            By Revenue
-                          </button>
-                          <button
-                            onClick={() => setRevenueMode("visits")}
-                            className={`px-4 py-1.5 text-xs tracking-wider uppercase border-l border-surface-border ${revenueMode === "visits" ? "bg-gold text-background font-semibold" : "text-muted hover:bg-surface-light"}`}
-                          >
-                            By Visits
-                          </button>
+                      <div className="flex flex-col gap-4 mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <h3 className="text-foreground font-medium">Revenue by Hour</h3>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <select
+                              value={revenueMode}
+                              onChange={(e) => setRevenueMode(e.target.value)}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs uppercase tracking-wider focus:border-gold focus:outline-none transition-colors"
+                            >
+                              <option value="revenue">By Revenue</option>
+                              <option value="visits">By Visits</option>
+                            </select>
+                            <FilterPills
+                              options={[
+                                { value: "today", label: "Today" },
+                                { value: "yesterday", label: "Yesterday" },
+                                { value: "custom", label: "Custom" },
+                              ]}
+                              selected={hourlyFilter}
+                              onChange={setHourlyFilter}
+                            />
+                          </div>
                         </div>
+                        {hourlyFilter === "custom" && (
+                          <div className="flex items-center gap-3 justify-end mb-2">
+                            <label className="text-muted text-xs tracking-wider uppercase">Date</label>
+                            <input
+                              type="date"
+                              value={hourlyDate}
+                              onChange={(e) => setHourlyDate(e.target.value)}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
+                            />
+                          </div>
+                        )}
                       </div>
                       {revenueData.revenueByHour.length === 0 ? (
                         <div className="text-muted text-sm text-center py-12">No data for this period.</div>
@@ -570,10 +633,13 @@ export default function InsightsPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                           <h3 className="text-foreground font-medium">Most Popular Items</h3>
                           <div className="flex items-center gap-3 flex-wrap">
-                            <FilterPills 
-                              options={[{ value: "all", label: "All" }, ...REVENUE_FILTERS]} 
-                              selected={menuTimeFilter} 
-                              onChange={(v) => { setMenuTimeFilter(v); setMenuPage(1); }} 
+                            <FilterPills
+                              options={[{ value: "all", label: "All" }, ...REVENUE_FILTERS]}
+                              selected={menuTimeFilter}
+                              onChange={(v) => {
+                                setMenuTimeFilter(v);
+                                setMenuPage(1);
+                              }}
                             />
                           </div>
                         </div>
@@ -585,14 +651,20 @@ export default function InsightsPage() {
                             <input
                               type="date"
                               value={menuCustomFrom}
-                              onChange={(e) => { setMenuCustomFrom(e.target.value); setMenuPage(1); }}
+                              onChange={(e) => {
+                                setMenuCustomFrom(e.target.value);
+                                setMenuPage(1);
+                              }}
                               className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
                             />
                             <label className="text-muted text-xs tracking-wider uppercase">To</label>
                             <input
                               type="date"
                               value={menuCustomTo}
-                              onChange={(e) => { setMenuCustomTo(e.target.value); setMenuPage(1); }}
+                              onChange={(e) => {
+                                setMenuCustomTo(e.target.value);
+                                setMenuPage(1);
+                              }}
                               className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
                             />
                           </div>
@@ -600,8 +672,23 @@ export default function InsightsPage() {
 
                         <div className="flex gap-2 flex-wrap justify-end">
                           <select
+                            value={menuPopularType}
+                            onChange={(e) => {
+                              setMenuPopularType(e.target.value);
+                              setMenuPage(1);
+                            }}
+                            className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
+                          >
+                            <option value="all">All Types</option>
+                            <option value="regular">Regular</option>
+                            <option value="jain">Jain</option>
+                          </select>
+                          <select
                             value={menuCategory}
-                            onChange={(e) => { setMenuCategory(e.target.value); setMenuPage(1); }}
+                            onChange={(e) => {
+                              setMenuCategory(e.target.value);
+                              setMenuPage(1);
+                            }}
                             className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
                           >
                             <option value="all">All Categories</option>
@@ -612,7 +699,10 @@ export default function InsightsPage() {
                           </select>
                           <select
                             value={menuSort}
-                            onChange={(e) => { setMenuSort(e.target.value); setMenuPage(1); }}
+                            onChange={(e) => {
+                              setMenuSort(e.target.value);
+                              setMenuPage(1);
+                            }}
                             className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
                           >
                             <option value="count">By Orders</option>
@@ -620,7 +710,10 @@ export default function InsightsPage() {
                             <option value="name">By Name</option>
                           </select>
                           <button
-                            onClick={() => { setMenuDir(menuDir === "desc" ? "asc" : "desc"); setMenuPage(1); }}
+                            onClick={() => {
+                              setMenuDir(menuDir === "desc" ? "asc" : "desc");
+                              setMenuPage(1);
+                            }}
                             className="px-3 py-1.5 border border-surface-border text-muted text-xs hover:border-gold hover:text-gold transition-colors"
                           >
                             {menuDir === "desc" ? "↓ Desc" : "↑ Asc"}
@@ -639,7 +732,12 @@ export default function InsightsPage() {
                                 <Charts.XAxis type="number" stroke="#888" tick={{ fontSize: 11 }} />
                                 <Charts.YAxis dataKey="name" type="category" stroke="#888" tick={{ fontSize: 11 }} width={80} />
                                 <Charts.Tooltip content={<CustomTooltip />} />
-                                <Charts.Bar dataKey={menuSort === "revenue" ? "revenue" : "count"} name={menuSort === "revenue" ? "Revenue" : "Orders"} fill="#c9a96e" radius={[0, 4, 4, 0]}>
+                                <Charts.Bar
+                                  dataKey={menuSort === "revenue" ? "revenue" : "count"}
+                                  name={menuSort === "revenue" ? "Revenue" : "Orders"}
+                                  fill="#c9a96e"
+                                  radius={[0, 4, 4, 0]}
+                                >
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                   {menuData.popularItems.map((_: any, idx: number) => (
                                     <Charts.Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
@@ -668,9 +766,7 @@ export default function InsightsPage() {
                                 ))}
                               </div>
                             )}
-                            <div className="text-xs text-muted tracking-wider uppercase">
-                              Total items: {menuData.pagination.total}
-                            </div>
+                            <div className="text-xs text-muted tracking-wider uppercase">Total items: {menuData.pagination.total}</div>
                           </div>
                         </>
                       )}
@@ -680,7 +776,28 @@ export default function InsightsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Category Performance */}
                       <div className="bg-surface border border-surface-border p-6">
-                        <h3 className="text-foreground font-medium mb-6">Category Performance</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                          <h3 className="text-foreground font-medium">Category Performance</h3>
+                          <div className="flex gap-2 flex-wrap">
+                            <select
+                              value={menuPieMetric}
+                              onChange={(e) => setMenuPieMetric(e.target.value)}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
+                            >
+                              <option value="revenue">By Revenue</option>
+                              <option value="count">By Items</option>
+                            </select>
+                            <select
+                              value={menuPieType}
+                              onChange={(e) => setMenuPieType(e.target.value)}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
+                            >
+                              <option value="all">All Type</option>
+                              <option value="regular">Regular</option>
+                              <option value="jain">Jain</option>
+                            </select>
+                          </div>
+                        </div>
                         {menuData.categoryPerformance.length === 0 ? (
                           <div className="text-muted text-sm text-center py-12">No data yet.</div>
                         ) : (
@@ -692,9 +809,23 @@ export default function InsightsPage() {
                                   cx="50%"
                                   cy="50%"
                                   outerRadius={100}
-                                  dataKey="revenue"
+                                  dataKey={
+                                    menuPieType === "jain"
+                                      ? menuPieMetric === "revenue"
+                                        ? "revenueJain"
+                                        : "countJain"
+                                      : menuPieType === "regular"
+                                        ? menuPieMetric === "revenue"
+                                          ? "revenueRegular"
+                                          : "countRegular"
+                                        : menuPieMetric === "revenue"
+                                          ? "revenue"
+                                          : "count"
+                                  }
                                   nameKey="name"
-                                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                  label={({ name, percent }: { name: string; percent: number }) =>
+                                    percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
+                                  }
                                   labelLine={false}
                                 >
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -974,24 +1105,9 @@ export default function InsightsPage() {
               <SectionLoading />
             ) : orderData ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KPICard
-                  label="Avg Items Per Order"
-                  value={orderData.avgItemsPerOrder}
-                  color="text-gold"
-                  subtext="Understand ordering behavior"
-                />
-                <KPICard
-                  label="Total Items Sold"
-                  value={orderData.totalItems.toLocaleString()}
-                  color="text-blue-400"
-                  subtext="Across all orders"
-                />
-                <KPICard
-                  label="Total Orders"
-                  value={orderData.totalOrders.toLocaleString()}
-                  color="text-green-400"
-                  subtext="Excluding cancelled"
-                />
+                <KPICard label="Avg Items Per Order" value={orderData.avgItemsPerOrder} color="text-gold" subtext="Understand ordering behavior" />
+                <KPICard label="Total Items Sold" value={orderData.totalItems.toLocaleString()} color="text-blue-400" subtext="Across all orders" />
+                <KPICard label="Total Orders" value={orderData.totalOrders.toLocaleString()} color="text-green-400" subtext="Excluding cancelled" />
               </div>
             ) : (
               <div className="text-muted text-center py-12">No data available.</div>
@@ -1058,7 +1174,9 @@ export default function InsightsPage() {
                                   <span className="text-foreground font-medium">
                                     {i + 1}. {occ.name}
                                   </span>
-                                  <span className="text-muted">{occ.count} bookings ({occ.percentage}%)</span>
+                                  <span className="text-muted">
+                                    {occ.count} bookings ({occ.percentage}%)
+                                  </span>
                                 </div>
                                 <div className="w-full bg-surface-border h-2 rounded-full overflow-hidden">
                                   <div

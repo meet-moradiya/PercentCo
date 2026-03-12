@@ -97,7 +97,18 @@ export async function GET(req: NextRequest) {
       case "overview":
         return await getOverview(dateRange);
       case "revenue":
-        return await getRevenue(dateRange, searchParams.get("mode") || "revenue");
+        {
+          const hourlyFilter = searchParams.get("hourlyFilter") || "today";
+          const hourlyDate = searchParams.get("hourlyDate");
+          let hourlyDateRange = getDateRange(hourlyFilter);
+          if (hourlyFilter === "custom" && hourlyDate) {
+            hourlyDateRange = {
+              start: new Date(hourlyDate + "T00:00:00"),
+              end: new Date(hourlyDate + "T23:59:59.999"),
+            };
+          }
+          return await getRevenue(dateRange, searchParams.get("mode") || "revenue", hourlyDateRange);
+        }
       case "menu":
         return await getMenuPerformance(searchParams, dateRange);
       case "reservations":
@@ -186,8 +197,9 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
   const cancelledRes = rangeReservations.filter((r: Record<string, unknown>) => r.status === "cancelled").length;
   const cancelRate = rangeReservations.length > 0 ? Math.round((cancelledRes / rangeReservations.length) * 100) : 0;
 
-  // Average dining duration
+  // Average dining duration (in date range)
   const completedWithTimes = await Reservation.find({
+    date: { $gte: startStr, $lte: endStr },
     seatedAt: { $ne: null },
     completedAt: { $ne: null },
     status: "completed",
@@ -202,13 +214,13 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
     avgDuration = Math.round(totalMin / completedWithTimes.length);
   }
 
-  // Top selling item today
-  const todayOrders = await Order.find({
-    createdAt: { $gte: new Date(today + "T00:00:00"), $lte: new Date(today + "T23:59:59.999") },
+  // Top selling item in date range
+  const topSellingOrders = await Order.find({
+    createdAt: { $gte: dateRange.start, $lte: dateRange.end },
     status: { $ne: "cancelled" },
   }).lean();
   const itemCounts: Record<string, { name: string; count: number }> = {};
-  for (const o of todayOrders) {
+  for (const o of topSellingOrders) {
     const items = (o as Record<string, unknown>).items as Array<Record<string, unknown>>;
     for (const item of items) {
       const id = item.menuItemId as string;
@@ -241,9 +253,14 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
 // =============================================
 // SECTION 2: REVENUE ANALYTICS
 // =============================================
-async function getRevenue(dateRange: { start: Date; end: Date }, mode: string) {
+async function getRevenue(dateRange: { start: Date; end: Date }, mode: string, hourlyDateRange: { start: Date; end: Date }) {
   const orders = await Order.find({
     createdAt: { $gte: dateRange.start, $lte: dateRange.end },
+    status: { $ne: "cancelled" },
+  }).lean();
+
+  const hourlyOrders = await Order.find({
+    createdAt: { $gte: hourlyDateRange.start, $lte: hourlyDateRange.end },
     status: { $ne: "cancelled" },
   }).lean();
 
@@ -255,11 +272,16 @@ async function getRevenue(dateRange: { start: Date; end: Date }, mode: string) {
     const doc = o as Record<string, unknown>;
     const created = new Date(doc.createdAt as string);
     const dateKey = getDateStr(created);
-    const hour = created.getHours();
 
     if (!dailyData[dateKey]) dailyData[dateKey] = { revenue: 0, orders: 0 };
     dailyData[dateKey].revenue += (doc.total as number) || 0;
     dailyData[dateKey].orders += 1;
+  }
+
+  for (const o of hourlyOrders) {
+    const doc = o as Record<string, unknown>;
+    const created = new Date(doc.createdAt as string);
+    const hour = created.getHours();
 
     if (!hourlyData[hour]) hourlyData[hour] = { revenue: 0, visits: 0 };
     hourlyData[hour].revenue += (doc.total as number) || 0;
@@ -308,6 +330,7 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
   const sortBy = params.get("sort") || "count"; // count, revenue, name
   const sortDir = params.get("dir") || "desc";
   const category = params.get("category");
+  const type = params.get("type") || "all";
 
   // We need to look up MenuItem categories upfront
   const MenuItem = (await import("@/models/MenuItem")).default;
@@ -325,7 +348,7 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
   }).lean();
 
   // Aggregate items
-  const itemStats: Record<string, { name: string; count: number; revenue: number; category?: string }> = {};
+  const itemStats: Record<string, { name: string; count: number; revenue: number; category?: string; isJain?: boolean }> = {};
   let totalJainItems = 0;
   let totalRegularItems = 0;
 
@@ -335,7 +358,7 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
       const id = item.menuItemId as string;
       const qty = (item.quantity as number) || 1;
       const cat = menuCategoryMap[id] || "other";
-      if (!itemStats[id]) itemStats[id] = { name: item.name as string, count: 0, revenue: 0, category: cat };
+      if (!itemStats[id]) itemStats[id] = { name: item.name as string, count: 0, revenue: 0, category: cat, isJain: !!item.isJain };
       itemStats[id].count += qty;
       itemStats[id].revenue += ((item.price as number) || 0) * qty;
 
@@ -348,6 +371,11 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
   let sortedItems = Object.values(itemStats);
   if (category && category !== "all") {
     sortedItems = sortedItems.filter((i) => i.category === category);
+  }
+  if (type === "jain") {
+    sortedItems = sortedItems.filter((i) => i.isJain);
+  } else if (type === "regular") {
+    sortedItems = sortedItems.filter((i) => !i.isJain);
   }
   
   if (sortBy === "revenue") {
@@ -362,15 +390,25 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
   const paginatedItems = sortedItems.slice((page - 1) * perPage, page * perPage);
 
   // Category performance from orders
-  const categoryStats: Record<string, { count: number; revenue: number }> = {};
+  const categoryStats: Record<string, { count: number; countJain: number; countRegular: number; revenue: number; revenueJain: number; revenueRegular: number }> = {};
   for (const o of orders) {
     const items = (o as Record<string, unknown>).items as Array<Record<string, unknown>>;
     for (const item of items) {
       const cat = menuCategoryMap[item.menuItemId as string] || "other";
-      if (!categoryStats[cat]) categoryStats[cat] = { count: 0, revenue: 0 };
+      if (!categoryStats[cat]) categoryStats[cat] = { count: 0, countJain: 0, countRegular: 0, revenue: 0, revenueJain: 0, revenueRegular: 0 };
       const qty = (item.quantity as number) || 1;
+      const rev = ((item.price as number) || 0) * qty;
+
       categoryStats[cat].count += qty;
-      categoryStats[cat].revenue += ((item.price as number) || 0) * qty;
+      categoryStats[cat].revenue += rev;
+
+      if (item.isJain) {
+        categoryStats[cat].countJain += qty;
+        categoryStats[cat].revenueJain += rev;
+      } else {
+        categoryStats[cat].countRegular += qty;
+        categoryStats[cat].revenueRegular += rev;
+      }
     }
   }
 
@@ -378,6 +416,10 @@ async function getMenuPerformance(params: URLSearchParams, dateRange: { start: D
     name: name.charAt(0).toUpperCase() + name.slice(1),
     count: stats.count,
     revenue: Math.round(stats.revenue * 100) / 100,
+    countJain: stats.countJain,
+    revenueJain: Math.round(stats.revenueJain * 100) / 100,
+    countRegular: stats.countRegular,
+    revenueRegular: Math.round(stats.revenueRegular * 100) / 100,
   })).sort((a, b) => b.revenue - a.revenue);
 
   const totalJainRegular = totalJainItems + totalRegularItems;
