@@ -131,6 +131,7 @@ const tabs: Tab[] = [
 ];
 
 const FILTERS = [
+  { value: "all", label: "All Time" },
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
   { value: "week", label: "This Week" },
@@ -150,7 +151,7 @@ type ChartComponents = any;
 
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [filter, setFilter] = useState("today");
+  const [filter, setFilter] = useState("all");
   const [revenueFilter, setRevenueFilter] = useState("week");
   const [revenueMetric, setRevenueMetric] = useState<"revenue" | "orders">("revenue");
   const [revenueMode, setRevenueMode] = useState("revenue");
@@ -159,6 +160,10 @@ export default function InsightsPage() {
   const [menuPage, setMenuPage] = useState(1);
   const [menuSort, setMenuSort] = useState("count");
   const [menuDir, setMenuDir] = useState("desc");
+  const [menuCategory, setMenuCategory] = useState("all");
+  const [menuTimeFilter, setMenuTimeFilter] = useState("all");
+  const [menuCustomFrom, setMenuCustomFrom] = useState("");
+  const [menuCustomTo, setMenuCustomTo] = useState("");
 
   // Data states
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,7 +217,16 @@ export default function InsightsPage() {
         }
         break;
       case "menu":
-        fetchSection("menu", { page: String(menuPage), sort: menuSort, dir: menuDir }).then(setMenuData);
+        {
+          const menuParams: Record<string, string> = { 
+            page: String(menuPage), sort: menuSort, dir: menuDir, category: menuCategory, filter: menuTimeFilter 
+          };
+          if (menuTimeFilter === "custom" && menuCustomFrom && menuCustomTo) {
+            menuParams.from = menuCustomFrom;
+            menuParams.to = menuCustomTo;
+          }
+          fetchSection("menu", menuParams).then(setMenuData);
+        }
         break;
       case "reservations":
         fetchSection("reservations", { filter }).then(setReservationData);
@@ -227,7 +241,7 @@ export default function InsightsPage() {
         fetchSection("occasions").then(setOccasionData);
         break;
     }
-  }, [activeTab, filter, revenueFilter, revenueMetric, revenueMode, menuPage, menuSort, menuDir, customFromDate, customToDate, fetchSection]);
+  }, [activeTab, filter, revenueFilter, revenueMetric, revenueMode, menuPage, menuSort, menuDir, menuCategory, menuTimeFilter, menuCustomFrom, menuCustomTo, customFromDate, customToDate, fetchSection]);
 
   const KPICard = ({
     label,
@@ -347,7 +361,7 @@ export default function InsightsPage() {
               <>
                 {/* Revenue + Orders Card */}
                 <div className="bg-surface border border-surface-border p-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                       <p className="text-muted text-xs tracking-wider uppercase mb-2">Total Revenue</p>
                       <p className="text-4xl font-bold text-gold">{formatCurrency(overviewData.totalRevenue)}</p>
@@ -355,6 +369,10 @@ export default function InsightsPage() {
                     <div>
                       <p className="text-muted text-xs tracking-wider uppercase mb-2">Total Orders</p>
                       <p className="text-4xl font-bold text-foreground">{overviewData.totalOrders}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted text-xs tracking-wider uppercase mb-2">Total Items</p>
+                      <p className="text-4xl font-bold text-blue-400">{overviewData.totalItems}</p>
                     </div>
                   </div>
                 </div>
@@ -364,7 +382,7 @@ export default function InsightsPage() {
                   <KPICard label="Total Customers" value={overviewData.totalCustomers} color="text-blue-400" />
                   <KPICard
                     label="Repeat Customers"
-                    value={`${overviewData.repeatPct}%`}
+                    value={`${overviewData.repeatCustomers} (${overviewData.repeatPct}%)`}
                     color="text-green-400"
                     subtext={`Of all customers return`}
                   />
@@ -548,9 +566,50 @@ export default function InsightsPage() {
                   <>
                     {/* Popular Items */}
                     <div className="bg-surface border border-surface-border p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <h3 className="text-foreground font-medium">Most Popular Items</h3>
-                        <div className="flex gap-2">
+                      <div className="flex flex-col gap-4 mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <h3 className="text-foreground font-medium">Most Popular Items</h3>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <FilterPills 
+                              options={[{ value: "all", label: "All" }, ...REVENUE_FILTERS]} 
+                              selected={menuTimeFilter} 
+                              onChange={(v) => { setMenuTimeFilter(v); setMenuPage(1); }} 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Custom date range picker for Menu */}
+                        {menuTimeFilter === "custom" && (
+                          <div className="flex items-center gap-3 justify-end mb-2">
+                            <label className="text-muted text-xs tracking-wider uppercase">From</label>
+                            <input
+                              type="date"
+                              value={menuCustomFrom}
+                              onChange={(e) => { setMenuCustomFrom(e.target.value); setMenuPage(1); }}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
+                            />
+                            <label className="text-muted text-xs tracking-wider uppercase">To</label>
+                            <input
+                              type="date"
+                              value={menuCustomTo}
+                              onChange={(e) => { setMenuCustomTo(e.target.value); setMenuPage(1); }}
+                              className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          <select
+                            value={menuCategory}
+                            onChange={(e) => { setMenuCategory(e.target.value); setMenuPage(1); }}
+                            className="px-3 py-1.5 bg-background border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none"
+                          >
+                            <option value="all">All Categories</option>
+                            <option value="starters">Starters</option>
+                            <option value="mains">Main Course</option>
+                            <option value="desserts">Desserts</option>
+                            <option value="drinks">Beverages</option>
+                          </select>
                           <select
                             value={menuSort}
                             onChange={(e) => { setMenuSort(e.target.value); setMenuPage(1); }}
@@ -591,23 +650,28 @@ export default function InsightsPage() {
                           </div>
 
                           {/* Pagination */}
-                          {menuData.pagination.pages > 1 && (
-                            <div className="flex justify-center gap-2 mt-6">
-                              {Array.from({ length: menuData.pagination.pages }, (_, i) => i + 1).map((p) => (
-                                <button
-                                  key={p}
-                                  onClick={() => setMenuPage(p)}
-                                  className={`w-8 h-8 text-xs border transition-colors ${
-                                    menuPage === p
-                                      ? "border-gold text-gold bg-gold/10"
-                                      : "border-surface-border text-muted hover:border-foreground/30"
-                                  }`}
-                                >
-                                  {p}
-                                </button>
-                              ))}
+                          <div className="flex flex-col items-center mt-6 gap-3">
+                            {menuData.pagination.pages > 1 && (
+                              <div className="flex justify-center gap-2">
+                                {Array.from({ length: menuData.pagination.pages }, (_, i) => i + 1).map((p) => (
+                                  <button
+                                    key={p}
+                                    onClick={() => setMenuPage(p)}
+                                    className={`w-8 h-8 text-xs border transition-colors ${
+                                      menuPage === p
+                                        ? "border-gold text-gold bg-gold/10"
+                                        : "border-surface-border text-muted hover:border-foreground/30"
+                                    }`}
+                                  >
+                                    {p}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted tracking-wider uppercase">
+                              Total items: {menuData.pagination.total}
                             </div>
-                          )}
+                          </div>
                         </>
                       )}
                     </div>
@@ -850,6 +914,7 @@ export default function InsightsPage() {
                             <tr className="border-b border-surface-border text-muted text-xs uppercase tracking-wider">
                               <th className="px-6 py-3 text-left">#</th>
                               <th className="px-6 py-3 text-left">Customer</th>
+                              <th className="px-6 py-3 text-left">Contact Info</th>
                               <th className="px-6 py-3 text-center">Visits</th>
                               <th className="px-6 py-3 text-right">Total Spent</th>
                             </tr>
@@ -859,7 +924,11 @@ export default function InsightsPage() {
                             {customerData.topCustomers.map((c: any, i: number) => (
                               <tr key={i} className="hover:bg-surface-light transition-colors">
                                 <td className="px-6 py-3 text-gold font-bold">{i + 1}</td>
-                                <td className="px-6 py-3 text-foreground">{c.name}</td>
+                                <td className="px-6 py-3 text-foreground font-medium capitalize">{c.name}</td>
+                                <td className="px-6 py-3">
+                                  <div className="text-sm text-foreground">{c.email}</div>
+                                  <div className="text-xs text-muted">{c.phone}</div>
+                                </td>
                                 <td className="px-6 py-3 text-center text-foreground">{c.visits}</td>
                                 <td className="px-6 py-3 text-right text-gold font-medium">{formatCurrency(c.totalSpent)}</td>
                               </tr>

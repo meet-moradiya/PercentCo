@@ -20,11 +20,11 @@ export interface IReservation extends Document {
 
 const ReservationSchema = new Schema<IReservation>(
   {
-    firstName: { type: String, required: true, trim: true },
-    lastName: { type: String, default: "", trim: true },
-    name: { type: String, default: "" }, // kept for backward compat, auto-set via pre-save
+    firstName: { type: String, required: true, trim: true, lowercase: true },
+    lastName: { type: String, default: "", trim: true, lowercase: true },
+    name: { type: String, default: "", lowercase: true }, // kept for backward compat, auto-set via pre-save
     email: { type: String, required: true, trim: true, lowercase: true },
-    phone: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true, lowercase: true },
     date: { type: String, required: true },
     time: { type: String, required: true },
     guests: { type: Number, required: true, min: 1, max: 20, default: 2 },

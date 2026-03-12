@@ -11,7 +11,7 @@ function getAdminToken(req: NextRequest) {
   return token;
 }
 
-const WALKIN_EMAIL = "walkin@percentco.com";
+
 
 // Helper: get date range boundaries
 function getDateRange(filter: string): { start: Date; end: Date } {
@@ -54,6 +54,9 @@ function getDateRange(filter: string): { start: Date; end: Date } {
       s.setDate(s.getDate() - 29);
       return { start: new Date(s.getFullYear(), s.getMonth(), s.getDate(), 0, 0, 0), end };
     }
+    case "all": {
+      return { start: new Date(2000, 0, 1), end };
+    }
     case "today":
     default: {
       return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0), end };
@@ -62,7 +65,11 @@ function getDateRange(filter: string): { start: Date; end: Date } {
 }
 
 function getDateStr(d: Date): string {
-  return d.toISOString().split("T")[0];
+  // Use local timezone rather than UTC which is what toISOString uses
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -92,11 +99,11 @@ export async function GET(req: NextRequest) {
       case "revenue":
         return await getRevenue(dateRange, searchParams.get("mode") || "revenue");
       case "menu":
-        return await getMenuPerformance(searchParams);
+        return await getMenuPerformance(searchParams, dateRange);
       case "reservations":
         return await getReservationAnalytics(dateRange);
       case "customers":
-        return await getCustomerAnalytics();
+        return await getCustomerAnalytics(dateRange);
       case "orders":
         return await getOrderInsights();
       case "occasions":
@@ -126,6 +133,16 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
   const totalRevenue = orders.reduce((sum: number, o: Record<string, unknown>) => sum + ((o.total as number) || 0), 0);
   const totalOrders = orders.length;
   const aov = totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0;
+  
+  let totalItems = 0;
+  for (const o of orders) {
+    const items = (o as Record<string, unknown>).items as Array<Record<string, unknown>>;
+    if (items) {
+      for (const item of items) {
+        totalItems += (item.quantity as number) || 1;
+      }
+    }
+  }
 
   // Total unique customers (all time)
   const allOrders = await Order.find({ status: { $ne: "cancelled" } }).select("customerId").lean();
@@ -162,8 +179,8 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
   const rangeReservations = await Reservation.find({
     date: { $gte: startStr, $lte: endStr },
   }).lean();
-  const onlineRes = rangeReservations.filter((r: Record<string, unknown>) => (r.email as string) !== WALKIN_EMAIL).length;
-  const walkinRes = rangeReservations.filter((r: Record<string, unknown>) => (r.email as string) === WALKIN_EMAIL).length;
+  const walkinRes = rangeReservations.filter((r: Record<string, unknown>) => (r.requests as string) === "Walk-in customer").length;
+  const onlineRes = rangeReservations.length - walkinRes;
 
   // Cancellation rate
   const cancelledRes = rangeReservations.filter((r: Record<string, unknown>) => r.status === "cancelled").length;
@@ -206,9 +223,11 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
     data: {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       totalOrders,
+      totalItems,
       aov,
       totalCustomers,
       repeatPct,
+      repeatCustomers,
       tableUtilPct,
       reservationsVsWalkins: { online: onlineRes, walkin: walkinRes },
       cancelRate,
@@ -283,15 +302,27 @@ async function getRevenue(dateRange: { start: Date; end: Date }, mode: string) {
 // =============================================
 // SECTION 3: MENU PERFORMANCE
 // =============================================
-async function getMenuPerformance(params: URLSearchParams) {
+async function getMenuPerformance(params: URLSearchParams, dateRange: { start: Date; end: Date }) {
   const page = parseInt(params.get("page") || "1");
-  const perPage = parseInt(params.get("perPage") || "15");
+  const perPage = parseInt(params.get("perPage") || "10");
   const sortBy = params.get("sort") || "count"; // count, revenue, name
   const sortDir = params.get("dir") || "desc";
   const category = params.get("category");
 
-  // Get all non-cancelled orders
-  const orders = await Order.find({ status: { $ne: "cancelled" } }).lean();
+  // We need to look up MenuItem categories upfront
+  const MenuItem = (await import("@/models/MenuItem")).default;
+  const menuItems = await MenuItem.find().lean();
+  const menuCategoryMap: Record<string, string> = {};
+  for (const mi of menuItems) {
+    const doc = mi as Record<string, unknown>;
+    menuCategoryMap[(doc._id as { toString(): string }).toString()] = (doc.category as string) || "other";
+  }
+
+  // Get all non-cancelled orders in date range
+  const orders = await Order.find({ 
+    createdAt: { $gte: dateRange.start, $lte: dateRange.end },
+    status: { $ne: "cancelled" } 
+  }).lean();
 
   // Aggregate items
   const itemStats: Record<string, { name: string; count: number; revenue: number; category?: string }> = {};
@@ -303,7 +334,8 @@ async function getMenuPerformance(params: URLSearchParams) {
     for (const item of items) {
       const id = item.menuItemId as string;
       const qty = (item.quantity as number) || 1;
-      if (!itemStats[id]) itemStats[id] = { name: item.name as string, count: 0, revenue: 0 };
+      const cat = menuCategoryMap[id] || "other";
+      if (!itemStats[id]) itemStats[id] = { name: item.name as string, count: 0, revenue: 0, category: cat };
       itemStats[id].count += qty;
       itemStats[id].revenue += ((item.price as number) || 0) * qty;
 
@@ -314,8 +346,8 @@ async function getMenuPerformance(params: URLSearchParams) {
 
   // Sort items
   let sortedItems = Object.values(itemStats);
-  if (category) {
-    // We'd need to join with MenuItem to filter by category — for simplicity, we skip this filter
+  if (category && category !== "all") {
+    sortedItems = sortedItems.filter((i) => i.category === category);
   }
   
   if (sortBy === "revenue") {
@@ -330,15 +362,6 @@ async function getMenuPerformance(params: URLSearchParams) {
   const paginatedItems = sortedItems.slice((page - 1) * perPage, page * perPage);
 
   // Category performance from orders
-  // We need to look up MenuItem categories
-  const MenuItem = (await import("@/models/MenuItem")).default;
-  const menuItems = await MenuItem.find().lean();
-  const menuCategoryMap: Record<string, string> = {};
-  for (const mi of menuItems) {
-    const doc = mi as Record<string, unknown>;
-    menuCategoryMap[(doc._id as { toString(): string }).toString()] = (doc.category as string) || "other";
-  }
-
   const categoryStats: Record<string, { count: number; revenue: number }> = {};
   for (const o of orders) {
     const items = (o as Record<string, unknown>).items as Array<Record<string, unknown>>;
@@ -387,8 +410,8 @@ async function getReservationAnalytics(dateRange: { start: Date; end: Date }) {
   }).lean();
 
   // Reservation vs Walk-in
-  const online = reservations.filter((r: Record<string, unknown>) => (r.email as string) !== WALKIN_EMAIL).length;
-  const walkin = reservations.filter((r: Record<string, unknown>) => (r.email as string) === WALKIN_EMAIL).length;
+  const walkin = reservations.filter((r: Record<string, unknown>) => (r.requests as string) === "Walk-in customer").length;
+  const online = reservations.length - walkin;
 
   // Status breakdown
   const statusCounts: Record<string, number> = {};
@@ -436,15 +459,34 @@ async function getReservationAnalytics(dateRange: { start: Date; end: Date }) {
 // =============================================
 // SECTION 5: CUSTOMER ANALYTICS
 // =============================================
-async function getCustomerAnalytics() {
-  // Get all non-cancelled orders with customerId
+async function getCustomerAnalytics(dateRange: { start: Date; end: Date }) {
+  // Get all non-cancelled orders with customerId (all time for global stats, or filtered for top customers)
   const orders = await Order.find({
     status: { $ne: "cancelled" },
     customerId: { $ne: "walk-in", $exists: true },
   }).select("customerId customerName total createdAt").lean();
 
+  // Find all reservations to extract actual customer details
+  const reservations = await Reservation.find({
+    status: { $nin: ["cancelled", "no-show"] }
+  }).select("phone firstName lastName name email").lean();
+  
+  // Map phone to customer details
+  const customerInfoMap: Record<string, { name: string; email: string; phone: string }> = {};
+  for (const r of reservations) {
+    const doc = r as Record<string, unknown>;
+    const phone = doc.phone as string;
+    if (phone) {
+      customerInfoMap[phone] = {
+        name: (doc.name as string) || (doc.firstName as string) || "Guest",
+        email: (doc.email as string) || "—",
+        phone: phone,
+      };
+    }
+  }
+
   // Build customer stats
-  const customerData: Record<string, { name: string; visits: number; totalSpent: number; firstOrder: Date }> = {};
+  const customerData: Record<string, { name: string; email: string; phone: string; visits: number; totalSpent: number; firstOrder: Date }> = {};
   
   for (const o of orders) {
     const doc = o as Record<string, unknown>;
@@ -452,8 +494,11 @@ async function getCustomerAnalytics() {
     if (!cid) continue;
     
     if (!customerData[cid]) {
+      const info = customerInfoMap[cid] || { name: (doc.customerName as string) || "Guest", email: "—", phone: cid };
       customerData[cid] = {
-        name: (doc.customerName as string) || "Unknown",
+        name: info.name !== "Guest" ? info.name : ((doc.customerName as string) !== "Guest" ? (doc.customerName as string) : "Guest"),
+        email: info.email,
+        phone: info.phone,
         visits: 0,
         totalSpent: 0,
         firstOrder: new Date(doc.createdAt as string),
@@ -480,6 +525,8 @@ async function getCustomerAnalytics() {
     .slice(0, 10)
     .map(c => ({
       name: c.name,
+      email: c.email,
+      phone: c.phone,
       visits: c.visits,
       totalSpent: Math.round(c.totalSpent * 100) / 100,
     }));

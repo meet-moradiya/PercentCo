@@ -35,7 +35,7 @@ const OrderItemSchema = new Schema<OrderItem>(
 const OrderSchema = new Schema<IOrder>(
   {
     tableNumber: { type: Number, required: true },
-    customerName: { type: String, default: "Guest" },
+    customerName: { type: String, required: true, lowercase: true },
     items: { type: [OrderItemSchema], required: true },
     total: { type: Number, required: true },
     status: {
@@ -45,7 +45,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     notes: { type: String, default: "" },
     reservationId: { type: Schema.Types.ObjectId, ref: "Reservation", default: null },
-    customerId: { type: String, default: "walk-in" },
+    customerId: { type: String, required: true, lowercase: true }, // phone number or "walk-in"
     completedAt: { type: Date, default: null },
   },
   { timestamps: true }
