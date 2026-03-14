@@ -168,12 +168,7 @@ export default function AdminReservations() {
     }
   };
 
-  const handleExport = (format: "csv" | "xlsx") => {
-    const params = new URLSearchParams({ format });
-    if (filter !== "all") params.set("status", filter);
-    if (dateFilter) params.set("from", dateFilter);
-    window.open(`/api/reservations/export?${params}`, "_blank");
-  };
+
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -203,34 +198,7 @@ export default function AdminReservations() {
           <h1 className="text-2xl text-foreground font-semibold">Reservations</h1>
           <p className="text-muted text-sm mt-1">Manage table bookings and guest lifecycle</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleExport("csv")}
-            className="flex items-center gap-2 px-4 py-2 border border-surface-border text-muted text-sm tracking-wider uppercase hover:border-gold hover:text-gold transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            CSV
-          </button>
-          <button
-            onClick={() => handleExport("xlsx")}
-            className="flex items-center gap-2 px-4 py-2 border border-surface-border text-muted text-sm tracking-wider uppercase hover:border-green-400 hover:text-green-400 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            Excel
-          </button>
-        </div>
+
       </div>
 
       {/* Filters */}

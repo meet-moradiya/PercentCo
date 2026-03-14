@@ -975,7 +975,7 @@ export default function InsightsPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Specific Date input */}
                       {peakTimeFilter === "custom" && (
                         <div className="flex items-center gap-3 justify-end mb-4">
