@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useTheme } from "@/context/ThemeProvider";
 
 type Category = "starters" | "mains" | "desserts" | "drinks";
 
@@ -35,7 +36,12 @@ const fallbackMenuData: Record<Category, MenuItem[]> = {
     { name: "Wild Mushroom Risotto", description: "Arborio rice, porcini, chanterelle, truffle oil, aged parmesan", price: "$36" },
   ],
   desserts: [
-    { name: "Chocolate Fondant", description: "Valrhona dark chocolate, molten center, vanilla bean ice cream, gold leaf", price: "$18", tag: "Must Try" },
+    {
+      name: "Chocolate Fondant",
+      description: "Valrhona dark chocolate, molten center, vanilla bean ice cream, gold leaf",
+      price: "$18",
+      tag: "Must Try",
+    },
     { name: "Crème Brûlée", description: "Madagascar vanilla, caramelized sugar, fresh berries", price: "$16" },
     { name: "Tiramisu Deconstructed", description: "Espresso-soaked savoiardi, mascarpone mousse, cocoa dust", price: "$17" },
     { name: "Tarte Tatin", description: "Caramelized apple, puff pastry, calvados cream, cinnamon", price: "$18" },
@@ -56,6 +62,7 @@ const categories: { key: Category; label: string }[] = [
 ];
 
 export default function Menu() {
+  const { theme } = useTheme();
   const [active, setActive] = useState<Category>("starters");
   const sectionRef = useScrollReveal();
   const [menuData, setMenuData] = useState<Record<Category, MenuItem[]>>(fallbackMenuData);
@@ -91,20 +98,12 @@ export default function Menu() {
   }, []);
 
   return (
-    <section
-      id="menu"
-      ref={sectionRef}
-      className="py-24 md:py-32 px-6 lg:px-8 bg-surface"
-    >
+    <section id="menu" ref={sectionRef} className="py-24 md:py-32 px-6 lg:px-8 bg-surface">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="text-gold text-sm tracking-[0.3em] uppercase">
-            Culinary Excellence
-          </span>
-          <h2 className="font-display text-4xl md:text-5xl mt-2 mb-4">
-            Our Menu
-          </h2>
+          <span className="text-gold text-sm tracking-[0.3em] uppercase">Culinary Excellence</span>
+          <h2 className="font-display text-4xl md:text-5xl mt-2 mb-4">Our Menu</h2>
           <div className="gold-divider max-w-xs mx-auto">
             <span className="text-gold text-lg">✦</span>
           </div>
@@ -139,10 +138,10 @@ export default function Menu() {
               {/* Large Image Top */}
               <div className="w-full h-64 overflow-hidden bg-surface-light shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={item.image || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"} 
-                  alt={item.name} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                <img
+                  src={`${item.image || (theme === "dark" ? "/images/defaultItemImageDark.png" : "/images/defaultItemImageWhite.png")}`}
+                  alt={item.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
 
@@ -150,31 +149,19 @@ export default function Menu() {
               <div className="p-6 flex flex-col flex-1">
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div className="flex items-center gap-2 flex-wrap flex-1">
-                    <h3 className="font-display text-2xl group-hover:text-gold transition-colors duration-300">
-                      {item.name}
-                    </h3>
+                    <h3 className="font-display text-2xl group-hover:text-gold transition-colors duration-300">{item.name}</h3>
                   </div>
-                  <span className="font-display text-2xl text-gold shrink-0">
-                    {item.price}
-                  </span>
+                  <span className="font-display text-2xl text-gold shrink-0">{item.price}</span>
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {item.tag && (
-                    <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 border border-gold/50 text-gold">
-                      {item.tag}
-                    </span>
-                  )}
+                  {item.tag && <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 border border-gold/50 text-gold">{item.tag}</span>}
                   {item.isJainAvailable && (
-                     <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 rounded uppercase tracking-wider">
-                       Jain Opt
-                     </span>
+                    <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 border border-green-700 text-green-700">Jain Option</span>
                   )}
                 </div>
 
-                <p className="text-foreground/60 text-sm leading-relaxed flex-1">
-                  {item.description}
-                </p>
+                <p className="text-foreground/60 text-sm leading-relaxed flex-1">{item.description}</p>
               </div>
             </div>
           ))}
@@ -182,8 +169,7 @@ export default function Menu() {
 
         {/* Note */}
         <p className="text-center text-foreground/30 text-sm mt-12 tracking-wide">
-          Menu items are subject to seasonal availability. Please inform your
-          server of any dietary requirements.
+          Menu items are subject to seasonal availability. Please inform your server of any dietary requirements.
         </p>
       </div>
     </section>

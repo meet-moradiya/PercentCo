@@ -105,7 +105,7 @@ export default function AdminInquiries() {
                   <h3 className="text-foreground font-medium text-lg">{iq.name}</h3>
                   <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border ${statusColor(iq.status)}`}>{iq.status}</span>
                 </div>
-                <div className="flex gap-4 text-xs text-muted mb-3">
+                <div className="flex flex-col sm:flex-row gap-4 text-xs text-muted mb-3">
                   <span className="flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path

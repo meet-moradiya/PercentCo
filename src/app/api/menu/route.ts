@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     let imageUrl = "";
     if (image && image.startsWith("data:image")) {
       const uploadRes = await cloudinary.uploader.upload(image, {
-        folder: "percentco_menu",
+        folder: "restaurant_menu",
       });
       imageUrl = uploadRes.secure_url;
     }

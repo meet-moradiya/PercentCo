@@ -34,7 +34,7 @@ export async function PUT(
       if (body.image && body.image.startsWith("data:image")) {
         // Upload new image
         const uploadRes = await cloudinary.uploader.upload(body.image, {
-          folder: "percentco_menu",
+          folder: "restaurant_menu",
         });
         updateFields.image = uploadRes.secure_url;
       } else if (body.image === "") {
@@ -74,7 +74,7 @@ export async function DELETE(
 
     // Optionally delete image from Cloudinary if it exists
     if (item.image && item.image.includes("cloudinary.com")) {
-      // Extract public_id from URL: e.g., https://res.cloudinary.com/demo/image/upload/v1234/percentco_menu/abc.jpg -> percentco_menu/abc
+      // Extract public_id from URL: e.g., https://res.cloudinary.com/demo/image/upload/v1234/restaurant_menu/abc.jpg -> restaurant_menu/abc
       try {
         const parts = item.image.split("/");
         const filename = parts.pop()?.split(".")[0];
