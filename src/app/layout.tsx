@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeProvider";
+import PWABootstrap from "@/components/PWABootstrap";
+import type { Viewport } from "next";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -16,22 +18,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Percentco — Fine Dining Experience",
+  title: "Percentco | Fine Dining Experience",
   description:
     "Experience exquisite cuisine in an intimate, luxurious setting. Percentco offers artfully crafted dishes, an award-winning wine list, and unforgettable dining moments for discerning palates.",
-  keywords: [
-    "fine dining",
-    "luxury restaurant",
-    "upscale dining",
-    "reservations",
-    "gourmet food",
-  ],
+  keywords: ["fine dining", "luxury restaurant", "upscale dining", "reservations", "gourmet food"],
+  icons: {
+    icon: "/icons/icon-72x72.png",
+  },
   openGraph: {
-    title: "Percentco — Fine Dining Experience",
-    description:
-      "Experience exquisite cuisine in an intimate, luxurious setting.",
+    title: "Percentco | Fine Dining Experience",
+    description: "Experience exquisite cuisine in an intimate, luxurious setting.",
     type: "website",
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PercentCo",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0A0A",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -42,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${playfair.variable} ${inter.variable} antialiased`}>
+        <PWABootstrap />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
