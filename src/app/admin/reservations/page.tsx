@@ -6,6 +6,8 @@ import { useEffect, useState, useCallback } from "react";
 type Reservation = any;
 
 import ConfirmModal from "@/components/ConfirmModal";
+import { PrintBill } from "@/components/PrintBill";
+import { useRef } from "react";
 
 interface TableOption {
   number: number;
@@ -30,6 +32,25 @@ export default function AdminReservations() {
   const [editModal, setEditModal] = useState<{ id: string; date: string; time: string; guests: number; name: string } | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+
+  const [printReservation, setPrintReservation] = useState<Reservation | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [printOrders, setPrintOrders] = useState<any[]>([]);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const executePrint = async (r: Reservation) => {
+    try {
+      const res = await fetch(`/api/orders?reservationId=${r._id}`);
+      const data = await res.json();
+      setPrintReservation(r);
+      setPrintOrders(data.orders || []);
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    } catch (err) {
+      console.error("Print error:", err);
+    }
+  };
 
   // Fetch time slots from settings
   useEffect(() => {
@@ -94,6 +115,13 @@ export default function AdminReservations() {
         const data = await res.json();
         alert(data.error || "Update failed");
         return;
+      }
+
+      if (status === "completed") {
+        const fullReservation = reservations.find(x => x._id === id);
+        if (fullReservation) {
+          executePrint({ ...fullReservation, status: "completed" });
+        }
       }
 
       loadReservations();
@@ -192,8 +220,9 @@ export default function AdminReservations() {
   const displayed = timeFilter ? reservations.filter((r: Reservation) => r.time === timeFilter) : reservations;
 
   return (
-    <div>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <>
+      <div className="print:hidden">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl text-foreground font-semibold">Reservations</h1>
           <p className="text-muted text-sm mt-1">Manage table bookings and guest lifecycle</p>
@@ -274,6 +303,7 @@ export default function AdminReservations() {
                 <th className="px-3 py-3 text-left">Date & Time</th>
                 <th className="px-3 py-3 text-left">Guests</th>
                 <th className="px-3 py-3 text-left">Table</th>
+                <th className="px-3 py-3 text-left">Total Spent</th>
                 <th className="px-3 py-3 text-left">Status</th>
                 <th className="px-3 py-3 text-left">Actions</th>
               </tr>
@@ -302,6 +332,9 @@ export default function AdminReservations() {
                     )}
                   </td>
                   <td className="px-3 py-3">
+                    <span className="text-foreground text-sm font-medium">₹{Number(r.totalSpent || 0).toFixed(2)}</span>
+                  </td>
+                  <td className="px-3 py-3">
                     <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border ${statusColor(r.status)}`}>{r.status}</span>
                   </td>
                   <td className="px-3 py-3">
@@ -328,6 +361,14 @@ export default function AdminReservations() {
                           className="px-2 py-0.5 text-[10px] text-muted border border-muted/30 hover:bg-muted/10 transition-colors"
                         >
                           Complete
+                        </button>
+                      )}
+                      {r.status === "completed" && (
+                        <button
+                          onClick={() => executePrint(r)}
+                          className="px-2 py-0.5 text-[10px] text-green-400 border border-green-400/30 hover:bg-green-400/10 transition-colors"
+                        >
+                          Print Bill
                         </button>
                       )}
                       {r.status === "confirmed" && (
@@ -540,5 +581,7 @@ export default function AdminReservations() {
         onCancel={() => setConfirmCancelId(null)}
       />
     </div>
+    <PrintBill ref={printRef} reservation={printReservation} orders={printOrders} />
+  </>
   );
 }

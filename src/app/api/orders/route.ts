@@ -120,9 +120,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const date = searchParams.get("date");
+    const reservationId = searchParams.get("reservationId");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: any = {};
+    if (reservationId) filter.reservationId = reservationId;
     if (status && status !== "all") filter.status = status;
     if (date) {
       const dayStart = new Date(date + "T00:00:00");

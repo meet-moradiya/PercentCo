@@ -167,19 +167,22 @@ async function getOverview(dateRange: { start: Date; end: Date }) {
   }
 
   // Total unique customers (all time)
-  const allOrders = await Order.find({ status: { $ne: "cancelled" } }).select("customerId").lean();
+  const allOrders = await Order.find({ status: { $ne: "cancelled" } }).select("customerId reservationId createdAt").lean();
   const uniqueCustomers = new Set(allOrders.map((o: Record<string, unknown>) => o.customerId as string).filter((id: string) => id && id !== "walk-in"));
   const totalCustomers = uniqueCustomers.size;
 
   // Repeat customers
-  const customerOrderCount: Record<string, number> = {};
+  const customerVisitSets: Record<string, Set<string>> = {};
   for (const o of allOrders) {
-    const cid = (o as Record<string, unknown>).customerId as string;
+    const doc = o as Record<string, unknown>;
+    const cid = doc.customerId as string;
     if (cid && cid !== "walk-in") {
-      customerOrderCount[cid] = (customerOrderCount[cid] || 0) + 1;
+      if (!customerVisitSets[cid]) customerVisitSets[cid] = new Set();
+      const visitKey = doc.reservationId ? String(doc.reservationId) : new Date(doc.createdAt as string).toISOString().split("T")[0];
+      customerVisitSets[cid].add(visitKey);
     }
   }
-  const repeatCustomers = Object.values(customerOrderCount).filter(c => c > 1).length;
+  const repeatCustomers = Object.values(customerVisitSets).filter(set => set.size > 1).length;
   const repeatPct = totalCustomers > 0 ? Math.round((repeatCustomers / totalCustomers) * 100) : 0;
 
   // Table utilization (today only)
@@ -559,7 +562,7 @@ async function getCustomerAnalytics(dateRange: { start: Date; end: Date }) {
   const orders = await Order.find({
     status: { $ne: "cancelled" },
     customerId: { $ne: "walk-in", $exists: true },
-  }).select("customerId customerName total createdAt").lean();
+  }).select("customerId customerName total createdAt reservationId").lean();
 
   // Find all reservations to extract actual customer details
   const reservations = await Reservation.find({
@@ -581,7 +584,7 @@ async function getCustomerAnalytics(dateRange: { start: Date; end: Date }) {
   }
 
   // Build customer stats
-  const customerData: Record<string, { name: string; email: string; phone: string; visits: number; totalSpent: number; firstOrder: Date }> = {};
+  const customerData: Record<string, { name: string; email: string; phone: string; visits: number; totalSpent: number; firstOrder: Date; visitSets: Set<string> }> = {};
   
   for (const o of orders) {
     const doc = o as Record<string, unknown>;
@@ -597,9 +600,13 @@ async function getCustomerAnalytics(dateRange: { start: Date; end: Date }) {
         visits: 0,
         totalSpent: 0,
         firstOrder: new Date(doc.createdAt as string),
+        visitSets: new Set<string>()
       };
     }
-    customerData[cid].visits += 1;
+    
+    const visitKey = doc.reservationId ? String(doc.reservationId) : new Date(doc.createdAt as string).toISOString().split("T")[0];
+    customerData[cid].visitSets.add(visitKey);
+    customerData[cid].visits = customerData[cid].visitSets.size;
     customerData[cid].totalSpent += (doc.total as number) || 0;
     
     const orderDate = new Date(doc.createdAt as string);
@@ -608,7 +615,8 @@ async function getCustomerAnalytics(dateRange: { start: Date; end: Date }) {
     }
   }
 
-  const customers = Object.values(customerData);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const customers = Object.values(customerData).map(({ visitSets, ...rest }) => rest);
   const totalCustomers = customers.length;
   const newCustomers = customers.filter(c => c.visits === 1).length;
   const returningCustomers = customers.filter(c => c.visits > 1).length;

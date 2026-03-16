@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Reservation from "@/models/Reservation";
+import Order from "@/models/Order";
 import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
 import { parseTime, windowsOverlap, BUFFER_MINUTES } from "@/lib/timeUtils";
@@ -166,9 +167,35 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .lean();
 
+    const reservationIds = reservations.map((r) => r._id);
+    const attachedOrders = await Order.find({
+      reservationId: { $in: reservationIds },
+      status: { $ne: "cancelled" }
+    }).lean();
+
+    const totalsMap: Record<string, number> = {};
+    attachedOrders.forEach(o => {
+      const rid = o.reservationId?.toString();
+      if (rid) {
+        totalsMap[rid] = (totalsMap[rid] || 0) + (o.total || 0);
+      }
+    });
+
+    // map reservations with their order totals
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const finalReservations = reservations.map((r: any) => ({
+      ...r,
+      totalSpent: totalsMap[r._id.toString()] || 0
+    }));
+
     return NextResponse.json({
-      reservations,
-      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      reservations: finalReservations,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("List reservations error:", error);

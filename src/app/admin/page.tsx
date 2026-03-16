@@ -7,7 +7,7 @@ interface TableInfo {
   capacity: number;
   isActive: boolean;
   status: "available" | "reserved" | "occupied" | "pending";
-  reservation?: { name: string; time: string; guests: number };
+  reservation?: { name: string; time: string; guests: number; totalSpent?: number };
   nextBooking?: { name: string; time: string; guests: number; minutesUntil: number };
   orderCode?: string;
 }
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
             return {
               ...t,
               status: "occupied" as const,
-              reservation: { name: seatedRes.name, time: seatedRes.time, guests: seatedRes.guests },
+              reservation: { name: seatedRes.name, time: seatedRes.time, guests: seatedRes.guests, totalSpent: seatedRes.totalSpent },
               orderCode: tableCode?.code,
             };
           }
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
             return {
               ...t,
               status: st,
-              reservation: { name: activeBooking.name, time: activeBooking.time, guests: activeBooking.guests },
+              reservation: { name: activeBooking.name, time: activeBooking.time, guests: activeBooking.guests, totalSpent: activeBooking.totalSpent },
             };
           }
 
@@ -376,6 +376,12 @@ export default function AdminDashboard() {
                     <p className="text-gold font-bold text-sm tracking-widest">{table.orderCode}</p>
                   </div>
                 )}
+                {table.status === "occupied" && (table.reservation?.totalSpent ?? 0) > 0 && (
+                  <div className="mt-1.5 border border-mauve-500/50 rounded px-2 py-1 bg-mauve-500/20">
+                    <p className="text-foreground text-[8px] uppercase tracking-wider">Total Spent</p>
+                    <p className="text-foreground font-bold text-sm tracking-widest">₹{Number(table.reservation!.totalSpent).toFixed(2)}</p>
+                  </div>
+                )}
                 {table.status === "available" && table.nextBooking && (
                   <div className="mt-2 border-t border-surface-border pt-2">
                     <p className="text-gold/70 text-[9px] uppercase tracking-wider">Next</p>
@@ -410,7 +416,15 @@ export default function AdminDashboard() {
                     {booking.tableNumber && <span className="text-gold"> · T{booking.tableNumber}</span>}
                   </p>
                 </div>
-                <span className={`px-3 py-1 text-xs uppercase tracking-wider border ${statusColor(booking.status)}`}>{booking.status}</span>
+                <div className="flex items-center gap-4">
+                  {booking.totalSpent > 0 && (
+                    <div className="text-right">
+                      <p className="text-[10px] text-muted uppercase tracking-wider">Total</p>
+                      <p className="text-foreground text-sm font-medium">₹{Number(booking.totalSpent).toFixed(2)}</p>
+                    </div>
+                  )}
+                  <span className={`px-3 py-1 text-xs uppercase tracking-wider border ${statusColor(booking.status)}`}>{booking.status}</span>
+                </div>
               </div>
             ))}
           </div>

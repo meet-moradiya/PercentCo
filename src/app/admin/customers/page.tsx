@@ -10,7 +10,7 @@ const FILTERS = [
   { value: "lastWeek", label: "Last Week" },
   { value: "month", label: "This Month" },
   { value: "lastMonth", label: "Last Month" },
-  { value: "custom", label: "Custom Date Range" },
+  { value: "custom", label: "Custom Range" },
 ];
 
 export default function CustomersPage() {
@@ -57,7 +57,7 @@ export default function CustomersPage() {
     window.open(`/api/customers?${params}`, "_blank");
   };
 
-  const displayedCustomers = customers.filter(c => {
+  const displayedCustomers = customers.filter((c) => {
     if (visitsFilter === "all") return true;
     if (visitsFilter === "8+") return c.visits >= 8;
     return c.visits === parseInt(visitsFilter);
@@ -77,14 +77,16 @@ export default function CustomersPage() {
               key={s.value}
               onClick={() => setFilter(s.value)}
               className={`px-3 py-1.5 text-xs tracking-wider uppercase border transition-all ${
-                filter === s.value ? "border-gold text-gold bg-gold/10" : "border-surface-border text-muted hover:border-foreground/30 hover:text-foreground"
+                filter === s.value
+                  ? "border-gold text-gold bg-gold/10"
+                  : "border-surface-border text-muted hover:border-foreground/30 hover:text-foreground"
               }`}
             >
               {s.label}
             </button>
           ))}
           {filter === "custom" && (
-            <div className="flex items-center gap-3 ml-2">
+            <div className="flex items-center gap-3">
               <input
                 type="date"
                 value={customFrom}
@@ -103,27 +105,29 @@ export default function CustomersPage() {
           <select
             value={visitsFilter}
             onChange={(e) => setVisitsFilter(e.target.value)}
-            className="ml-2 px-3 py-1.5 bg-surface border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
+            className="px-3 py-1.5 bg-surface border border-surface-border text-foreground text-xs focus:border-gold focus:outline-none transition-colors"
           >
             <option value="all">Visits: All</option>
-            {["1", "2", "3", "4", "5", "6", "7", "8", "8+"].map(v => (
-              <option key={v} value={v}>Visits: {v}</option>
+            {["1", "2", "3", "4", "5", "6", "7", "8", "8+"].map((v) => (
+              <option key={v} value={v}>
+                Visits: {v}
+              </option>
             ))}
           </select>
         </div>
-        
+
         <div className="flex items-center gap-3 self-start xl:self-auto">
           <button
             onClick={() => handleExport("csv")}
             disabled={filter === "custom" && (!customFrom || !customTo)}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-light border border-surface-border text-muted text-xs tracking-wider uppercase hover:text-gold hover:border-gold transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-surface-light border border-surface-border text-nowrap text-xs tracking-wider uppercase hover:text-gold hover:border-gold transition-colors disabled:opacity-50"
           >
             Export CSV
           </button>
           <button
             onClick={() => handleExport("xlsx")}
             disabled={filter === "custom" && (!customFrom || !customTo)}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-light border border-surface-border text-muted text-xs tracking-wider uppercase hover:text-green-400 hover:border-green-400 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-surface-light border border-surface-border text-nowrap text-xs tracking-wider uppercase hover:text-green-400 hover:border-green-400 transition-colors disabled:opacity-50"
           >
             Export Excel
           </button>

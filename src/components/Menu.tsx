@@ -17,43 +17,6 @@ interface MenuItem {
   category?: Category;
 }
 
-// Fallback data used when API is unavailable (e.g., no MongoDB configured yet)
-const fallbackMenuData: Record<Category, MenuItem[]> = {
-  starters: [
-    { name: "Truffle Burrata", description: "Fresh burrata, black truffle shavings, aged balsamic, micro basil", price: "$24", tag: "Chef's Pick" },
-    { name: "Tuna Tartare", description: "Yellowfin tuna, avocado mousse, sesame tuile, citrus ponzu", price: "$28" },
-    { name: "Lobster Bisque", description: "Velvety lobster broth, cognac cream, chive oil, gruyère crouton", price: "$22" },
-    { name: "Foie Gras Torchon", description: "Duck foie gras, fig compote, brioche toast, fleur de sel", price: "$32" },
-    { name: "Carpaccio di Manzo", description: "Wagyu beef carpaccio, arugula, parmesan, truffle dressing", price: "$26" },
-    { name: "Ceviche Nikkei", description: "Sea bass, tiger milk, aji amarillo, crispy shallots", price: "$25" },
-  ],
-  mains: [
-    { name: "Wagyu Ribeye", description: "A5 Japanese wagyu, bone marrow butter, charred broccolini, red wine jus", price: "$85", tag: "Signature" },
-    { name: "Pan-Seared Scallops", description: "Hokkaido scallops, cauliflower purée, brown butter, capers", price: "$48" },
-    { name: "Duck Confit", description: "Slow-cooked duck leg, cherry gastrique, roasted root vegetables", price: "$42" },
-    { name: "Chilean Sea Bass", description: "Miso-glazed sea bass, bok choy, shiitake dashi, ginger oil", price: "$52", tag: "Popular" },
-    { name: "Rack of Lamb", description: "Herb-crusted lamb, pistachio crust, mint gremolata, fondant potato", price: "$58" },
-    { name: "Wild Mushroom Risotto", description: "Arborio rice, porcini, chanterelle, truffle oil, aged parmesan", price: "$36" },
-  ],
-  desserts: [
-    {
-      name: "Chocolate Fondant",
-      description: "Valrhona dark chocolate, molten center, vanilla bean ice cream, gold leaf",
-      price: "$18",
-      tag: "Must Try",
-    },
-    { name: "Crème Brûlée", description: "Madagascar vanilla, caramelized sugar, fresh berries", price: "$16" },
-    { name: "Tiramisu Deconstructed", description: "Espresso-soaked savoiardi, mascarpone mousse, cocoa dust", price: "$17" },
-    { name: "Tarte Tatin", description: "Caramelized apple, puff pastry, calvados cream, cinnamon", price: "$18" },
-  ],
-  drinks: [
-    { name: "The Golden Hour", description: "Champagne, elderflower liqueur, gold flakes, citrus zest", price: "$22", tag: "Signature" },
-    { name: "Smoky Old Fashioned", description: "Japanese whisky, demerara, Angostura, smoked oak", price: "$20" },
-    { name: "Espresso Martini", description: "Premium vodka, fresh espresso, coffee liqueur, vanilla", price: "$18" },
-    { name: "Sommelier's Selection", description: "Curated wine pairing — ask your server for today's selection", price: "$35" },
-  ],
-};
-
 const categories: { key: Category; label: string }[] = [
   { key: "starters", label: "Starters" },
   { key: "mains", label: "Main Courses" },
@@ -65,7 +28,7 @@ export default function Menu() {
   const { theme } = useTheme();
   const [active, setActive] = useState<Category>("starters");
   const sectionRef = useScrollReveal();
-  const [menuData, setMenuData] = useState<Record<Category, MenuItem[]>>(fallbackMenuData);
+  const [menuData, setMenuData] = useState<Record<Category, MenuItem[]>>();
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -129,11 +92,11 @@ export default function Menu() {
 
         {/* Menu Items Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {menuData[active].map((item, i) => (
+          {menuData?.[active]?.map((item, i) => (
             <div
               key={item._id || item.name}
               className="group border border-surface-border overflow-hidden hover:border-gold/30 transition-colors duration-300 bg-surface-light/30 flex flex-col"
-              style={{ animationDelay: `${i * 100}ms` }}
+              // style={{ animationDelay: `${i * 100}ms` }}
             >
               {/* Large Image Top */}
               <div className="w-full h-64 overflow-hidden bg-surface-light shrink-0">
