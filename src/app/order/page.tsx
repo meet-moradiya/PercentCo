@@ -59,6 +59,7 @@ function OrderPageInner() {
     tableNumber: number;
   } | null>(null);
   const [orderError, setOrderError] = useState("");
+  const [guestNameLoading, setGuestNameLoading] = useState(false);
 
   // OTP state
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -89,6 +90,37 @@ function OrderPageInner() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Fetch guest name for the selected table
+  useEffect(() => {
+    if (!selectedTable) {
+      setCustomerName("");
+      return;
+    }
+
+    const fetchGuestName = async () => {
+      setGuestNameLoading(true);
+      try {
+        const res = await fetch(`/api/tables/${selectedTable}/guest`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.guestName) {
+            setCustomerName(data.guestName);
+          } else {
+            setCustomerName("Guest");
+          }
+        } else {
+            setCustomerName("Guest");
+        }
+      } catch (err) {
+        setCustomerName("Guest");
+      } finally {
+        setGuestNameLoading(false);
+      }
+    };
+
+    fetchGuestName();
+  }, [selectedTable]);
 
   // Update URL when table changes
   const selectTable = (num: number) => {
@@ -251,7 +283,6 @@ function OrderPageInner() {
             <button
               onClick={() => {
                 setOrderPlaced(null);
-                setCustomerName("");
                 setNotes("");
               }}
               className="px-6 py-3 border border-gold text-gold text-sm tracking-widest uppercase hover:bg-gold hover:text-background transition-all"
@@ -543,14 +574,15 @@ function OrderPageInner() {
                       <span className="text-gold text-xl font-bold">₹{cartTotal.toFixed(2)}</span>
                     </div>
 
-                    {/* Customer name */}
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Your name (optional)"
-                      className="w-full bg-background border border-surface-border px-3 py-2 text-sm text-foreground placeholder-muted/50 focus:border-gold focus:outline-none transition-colors mb-3"
-                    />
+                    {/* Customer name (Read-Only) */}
+                    <div className="mb-3 px-3 py-2 bg-surface text-sm text-foreground/80 border border-surface-border">
+                      <span className="text-muted mr-2">Ordering for:</span>
+                      {guestNameLoading ? (
+                         <span className="animate-pulse">Loading name...</span>
+                      ) : (
+                         <span className="font-semibold text-gold">{customerName || "Guest"}</span>
+                      )}
+                    </div>
 
                     {/* Notes */}
                     <textarea
