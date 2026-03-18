@@ -29,12 +29,22 @@ async function getPayload(req: NextRequest): Promise<TokenPayload | null> {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Login pages are always accessible
+  // Login pages: check if already logged in and redirect if so
   if (
     pathname.startsWith("/admin/login") ||
     pathname.startsWith("/chef/login") ||
     pathname.startsWith("/waiter/login")
   ) {
+    const payload = await getPayload(req);
+    if (payload) {
+      if (payload.role === "chef") {
+        return NextResponse.redirect(new URL("/chef", req.url));
+      } else if (payload.role === "waiter") {
+        return NextResponse.redirect(new URL("/waiter", req.url));
+      } else {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
+    }
     return NextResponse.next();
   }
 

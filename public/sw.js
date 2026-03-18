@@ -1,68 +1,70 @@
-const CACHE_NAME = "percentco-cache-v2";
+const CACHE_NAME = "percentco-cache-v3"; // Bump to v3 to trigger cleanup
 
 const urlsToCache = [
-  "/admin",
-  "/chef",
-  "/waiter",
   "/offline.html"
 ];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
+      return Promise.allSettled(urlsToCache.map(url => cache.add(url)));
     })
   );
 });
 
+// Clear old caches to free up space (fixes the 180MB issue)
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log("Deleting old cache:", cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+
+  // Skip caching for APIs, images, and non-http protocols
+  if (
+    !url.protocol.startsWith("http") || 
+    url.pathname.startsWith("/api/") ||
+    url.pathname.includes("/_next/image")
+  ) {
+    return; // Let the browser handle these normally
+  }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const responseClone = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
-
+        // Only cache successful responses and 'basic' types (prevents 7MB padded opaque responses)
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        // Network failed, fallback to cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Optional: return offline page for navigation requests
+          if (event.request.mode === "navigate") {
+            return caches.match("/offline.html");
+          }
+        });
+      })
   );
 });
-
-
-// self.addEventListener('install', (event) => {
-//   // Skip waiting to ensure the new service worker activates immediately.
-//   self.skipWaiting();
-// });
-
-// self.addEventListener('activate', (event) => {
-//   // Claim clients to immediately control the open pages
-//   event.waitUntil(self.clients.claim());
-// });
-
-// self.addEventListener('fetch', (event) => {
-//   // For development and standard Next.js operation, we do a simple Network-First fallback strategy.
-//   // Next.js handles its own internal chunk caching, so this Service Worker primarily 
-//   // satisfies the PWA installability requirements without aggressively interfering with your live updates.
-  
-//   // We only intercept GET requests
-//   if (event.request.method !== 'GET') return;
-
-//   event.respondWith(
-//     fetch(event.request).then((response) => response).catch(async () => {
-//       // In a real production offline-first app, you'd return caches.match(event.request) here.
-//       // For now, if the network fails, we just let it fail gracefully.
-//       return caches.match(event.request);
-//     })
-//   );
-// });
