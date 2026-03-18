@@ -3,14 +3,17 @@ import { connectDB } from "@/lib/mongodb";
 import Admin from "@/models/Admin";
 import { verifyToken, hashPassword } from "@/lib/auth";
 
-function getAdminToken(req: NextRequest) {
+function getAdminPayload(req: NextRequest) {
   const token = req.cookies.get("admin-token")?.value;
-  if (!token || !verifyToken(token)) return null;
-  return token;
+  if (!token) return null;
+  const payload = verifyToken(token);
+  if (!payload) return null;
+  return payload;
 }
 
 export async function GET(req: NextRequest) {
-  if (!getAdminToken(req)) {
+  const payload = getAdminPayload(req);
+  if (!payload || payload.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
@@ -24,20 +27,24 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!getAdminToken(req)) {
+  const payload = getAdminPayload(req);
+  if (!payload || payload.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
     await connectDB();
-    const { name, email, password } = await req.json();
+    const { name, email, password, role } = await req.json();
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const validRoles = ["admin", "chef", "waiter"];
+    const finalRole = role && validRoles.includes(role) ? role : "admin";
+
     const existing = await Admin.findOne({ email: email.toLowerCase().trim() });
     if (existing) {
-      return NextResponse.json({ error: "Admin with this email already exists" }, { status: 400 });
+      return NextResponse.json({ error: "A staff member with this email already exists" }, { status: 400 });
     }
 
     const passwordHash = await hashPassword(password);
@@ -45,6 +52,7 @@ export async function POST(req: NextRequest) {
       name,
       email: email.toLowerCase().trim(),
       passwordHash,
+      role: finalRole,
     });
 
     return NextResponse.json({
@@ -53,6 +61,7 @@ export async function POST(req: NextRequest) {
         _id: newAdmin._id,
         name: newAdmin.name,
         email: newAdmin.email,
+        role: newAdmin.role,
         createdAt: newAdmin.createdAt,
       },
     });

@@ -29,7 +29,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("hours");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [admins, setAdmins] = useState<any[]>([]);
-  const [adminForm, setAdminForm] = useState({ name: "", email: "", password: "" });
+  const [adminForm, setAdminForm] = useState({ name: "", email: "", password: "", role: "admin" as "admin" | "chef" | "waiter" });
   const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [tables, setTables] = useState<TableConfig[]>([]);
   const [slotDuration, setSlotDuration] = useState(90);
@@ -115,7 +115,7 @@ export default function AdminSettings() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setAdminForm({ name: "", email: "", password: "" });
+      setAdminForm({ name: "", email: "", password: "", role: "admin" });
       loadAdmins();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
@@ -365,7 +365,7 @@ export default function AdminSettings() {
     { key: "tables", label: "Tables" },
     { key: "closures", label: "Closures" },
     { key: "events", label: "Events & Promos" },
-    { key: "admins", label: "Admins" },
+    { key: "admins", label: "Staff" },
   ];
   return (
     <div>
@@ -983,11 +983,26 @@ export default function AdminSettings() {
           </div>
         </div>
       )}
-      {/* ========== ADMINS TAB ========== */}
+      {/* ========== STAFF TAB ========== */}
       {activeTab === "admins" && (
         <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Total Staff</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{admins.length}</p>
+            </div>
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Chefs</p>
+              <p className="text-2xl font-bold text-orange-400 mt-1">{admins.filter((a) => a.role === "chef").length}</p>
+            </div>
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Waiters</p>
+              <p className="text-2xl font-bold text-blue-400 mt-1">{admins.filter((a) => a.role === "waiter").length}</p>
+            </div>
+          </div>
           <div className="bg-surface border border-surface-border p-6">
-            <h2 className="text-foreground font-medium mb-4">Add New Administrator</h2>
+            <h2 className="text-foreground font-medium mb-4">Add New Staff Member</h2>
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Name</label>
@@ -1006,7 +1021,7 @@ export default function AdminSettings() {
                   value={adminForm.email}
                   onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
                   className="bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none"
-                  placeholder="admin@example.com"
+                  placeholder="staff@example.com"
                 />
               </div>
               <div>
@@ -1019,37 +1034,67 @@ export default function AdminSettings() {
                   placeholder="••••••••"
                 />
               </div>
+              <div>
+                <label className="block text-muted text-xs tracking-wider uppercase mb-1.5">Role</label>
+                <select
+                  value={adminForm.role}
+                  onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value as "admin" | "chef" | "waiter" })}
+                  className="bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="chef">Chef</option>
+                  <option value="waiter">Waiter</option>
+                </select>
+              </div>
               <button
                 onClick={addAdmin}
                 className="px-5 py-2.5 bg-gold text-background text-sm font-semibold tracking-wider uppercase hover:bg-gold-light"
               >
-                + Add Admin
+                + Add Staff
               </button>
             </div>
           </div>
           <div className="bg-surface border border-surface-border">
             <div className="px-6 py-4 border-b border-surface-border">
-              <h2 className="text-foreground font-medium">Internal Users</h2>
-              <p className="text-xs text-muted mt-1">These users have full access to the management dashboard.</p>
+              <h2 className="text-foreground font-medium">Staff Accounts</h2>
+              <p className="text-xs text-muted mt-1">Manage all internal users — admins, chefs, and waiters.</p>
             </div>
             {loadingAdmins ? (
               <div className="p-8 text-center text-muted">Loading...</div>
+            ) : admins.length === 0 ? (
+              <div className="p-8 text-center text-muted text-sm">No staff accounts found.</div>
             ) : (
               <div className="divide-y divide-surface-border">
-                {admins.map((a) => (
-                  <div key={a._id} className="flex justify-between items-center p-4 hover:bg-surface-light transition-colors">
-                    <div>
-                      <p className="font-medium text-foreground">{a.name}</p>
-                      <p className="text-sm text-muted">{a.email}</p>
+                {admins.map((a) => {
+                  const roleBadge =
+                    a.role === "chef"
+                      ? "bg-orange-500/15 text-orange-400 border-orange-400/30"
+                      : a.role === "waiter"
+                        ? "bg-blue-500/15 text-blue-400 border-blue-400/30"
+                        : "bg-gold/15 text-gold border-gold/30";
+                  const roleLabel = a.role === "chef" ? "Chef" : a.role === "waiter" ? "Waiter" : "Admin";
+                  return (
+                    <div key={a._id} className="flex justify-between items-center p-4 hover:bg-surface-light transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">{a.name}</p>
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border ${roleBadge}`}>
+                              {roleLabel}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted">{a.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setConfirmDeleteAdmin({ id: a._id, email: a.email })}
+                        className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                      >
+                        Remove
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setConfirmDeleteAdmin({ id: a._id, email: a.email })}
-                      className="px-3 py-1.5 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

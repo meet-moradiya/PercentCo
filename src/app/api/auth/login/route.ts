@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const seedEmail = process.env.ADMIN_EMAIL || "admin@percentco.com";
     const seedPassword = process.env.ADMIN_PASSWORD || "admin123";
 
-    // 🔹 If admin not found but seed credentials match → create admin
+    // If admin not found but seed credentials match → create admin
     if (!admin && normalizedEmail === seedEmail && password === seedPassword) {
       const passwordHash = await hashPassword(password);
 
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         email: normalizedEmail,
         passwordHash,
         name: "Admin",
+        role: "admin",
       });
     }
 
@@ -44,9 +45,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    const role = admin.role || "admin";
+
     const token = signToken({
       adminId: admin._id.toString(),
       email: admin.email,
+      role,
     });
 
     const response = NextResponse.json({
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
       admin: {
         email: admin.email,
         name: admin.name,
+        role,
       },
     });
 
