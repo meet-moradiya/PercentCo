@@ -1,7 +1,9 @@
-const CACHE_NAME = "percentco-cache-v1";
+const CACHE_NAME = "percentco-cache-v2";
 
 const urlsToCache = [
   "/admin",
+  "/chef",
+  "/waiter",
   "/offline.html"
 ];
 
