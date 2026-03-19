@@ -6,12 +6,12 @@ import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
 import { verifyTableCode } from "@/lib/email";
 
-// POST — Public: place a new order (requires valid OTP code)
+// POST — Place a new order (customer OTP or waiter-authenticated)
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const body = await req.json();
-    const { tableNumber, customerName, items, notes, orderCode } = body;
+    const { tableNumber, customerName, items, notes, orderCode, source } = body;
 
     if (!tableNumber || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -20,25 +20,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify OTP code
-    if (!orderCode) {
-      return NextResponse.json(
-        { error: "Order code is required. Please enter the code sent to your email." },
-        { status: 400 }
-      );
-    }
+    // Read order mode from settings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings: any = await Settings.findOne().lean();
+    const orderMode = settings?.orderMode || "both";
 
-    const isCodeValid = await verifyTableCode(Number(tableNumber), String(orderCode).trim());
-    if (!isCodeValid) {
-      return NextResponse.json(
-        { error: "Invalid or expired order code. Please check and try again." },
-        { status: 403 }
-      );
+    const isWaiterSource = source === "waiter";
+
+    // If it's a waiter-placed order, verify JWT
+    if (isWaiterSource) {
+      const token = req.cookies.get("admin-token")?.value;
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const payload = verifyToken(token);
+      if (!payload || (payload.role !== "waiter" && payload.role !== "admin")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      // If mode is "customer" only, waiters can't place orders
+      if (orderMode === "customer") {
+        return NextResponse.json(
+          { error: "Waiter ordering is disabled. Only customer self-ordering is active." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Customer order — check if customer ordering is allowed
+      if (orderMode === "waiter") {
+        return NextResponse.json(
+          { error: "Online ordering is disabled. Please ask your waiter to place your order." },
+          { status: 403 }
+        );
+      }
+
+      // Verify OTP code for customer orders
+      if (!orderCode) {
+        return NextResponse.json(
+          { error: "Order code is required. Please enter the code sent to your email." },
+          { status: 400 }
+        );
+      }
+
+      const isCodeValid = await verifyTableCode(Number(tableNumber), String(orderCode).trim());
+      if (!isCodeValid) {
+        return NextResponse.json(
+          { error: "Invalid or expired order code. Please check and try again." },
+          { status: 403 }
+        );
+      }
     }
 
     // Validate table exists and is active
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const settings: any = await Settings.findOne().lean();
     if (settings) {
       const table = (settings.tables || []).find(
         (t: { number: number; isActive: boolean }) => t.number === tableNumber && t.isActive
@@ -95,6 +127,7 @@ export async function POST(req: NextRequest) {
       status: "pending",
       reservationId,
       customerId,
+      source: isWaiterSource ? "waiter" : "customer",
     });
 
     return NextResponse.json(

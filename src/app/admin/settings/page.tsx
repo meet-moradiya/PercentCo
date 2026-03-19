@@ -24,9 +24,11 @@ interface EventPromo {
   badgeColor: string;
   isActive: boolean;
 }
-type SettingsTab = "hours" | "tables" | "closures" | "events" | "admins";
+type SettingsTab = "hours" | "tables" | "closures" | "events" | "admins" | "ordering";
+type OrderMode = "customer" | "waiter" | "both";
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("hours");
+  const [orderMode, setOrderMode] = useState<OrderMode>("both");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [admins, setAdmins] = useState<any[]>([]);
   const [adminForm, setAdminForm] = useState({ name: "", email: "", password: "", role: "admin" as "admin" | "chef" | "waiter" });
@@ -80,6 +82,7 @@ export default function AdminSettings() {
         setClosedDates(data.settings.closedDates || []);
         setEvents(data.settings.events || []);
         setQrCustomText(data.settings.qrCustomText || "");
+        setOrderMode(data.settings.orderMode || "both");
       }
     } catch (error) {
       console.error("Load settings error:", error);
@@ -150,6 +153,7 @@ export default function AdminSettings() {
           closedDates,
           events,
           qrCustomText,
+          orderMode,
         }),
       });
       setSaved(true);
@@ -359,13 +363,55 @@ export default function AdminSettings() {
         />
       </svg>
     ),
+    ordering: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
+        />
+      </svg>
+    ),
   };
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "hours", label: "Hours & Slots" },
     { key: "tables", label: "Tables" },
     { key: "closures", label: "Closures" },
     { key: "events", label: "Events & Promos" },
+    { key: "ordering", label: "Ordering" },
     { key: "admins", label: "Staff" },
+  ];
+  const orderModes: { key: OrderMode; title: string; desc: string; icon: React.ReactNode }[] = [
+    {
+      key: "customer",
+      title: "Customer Self-Order",
+      desc: "Customers scan the QR code at their table and place orders using an OTP sent to their email. Waiters cannot place orders.",
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+        </svg>
+      ),
+    },
+    {
+      key: "waiter",
+      title: "Waiter Only",
+      desc: "Only waiters can place orders from their portal. The online customer order page is disabled and inaccessible.",
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      ),
+    },
+    {
+      key: "both",
+      title: "Both (Recommended)",
+      desc: "Customers can scan & order with OTP, and waiters can also place orders from their portal. Best flexibility.",
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+        </svg>
+      ),
+    },
   ];
   return (
     <div>
@@ -393,7 +439,7 @@ export default function AdminSettings() {
               activeTab === t.key ? "border-gold text-gold" : "border-transparent text-muted hover:text-foreground"
             }`}
           >
-            <span className="mr-1.5">{tabIcons[t.key]}</span>
+            <span className="mr-1.5">{tabIcons[t.key as keyof typeof tabIcons]}</span>
             <span className="text-nowrap">{t.label}</span>
           </button>
         ))}
@@ -1097,6 +1143,61 @@ export default function AdminSettings() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ========== ORDERING TAB ========== */}
+      {activeTab === "ordering" && (
+        <div className="space-y-6">
+          <div className="bg-surface border border-surface-border">
+            <div className="px-6 py-4 border-b border-surface-border">
+              <h2 className="text-foreground font-medium">Order System Mode</h2>
+              <p className="text-xs text-muted mt-1">Choose how food orders are placed at your restaurant.</p>
+            </div>
+            <div className="p-6 grid gap-4 sm:grid-cols-3">
+              {orderModes.map((m) => {
+                const active = orderMode === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    onClick={() => setOrderMode(m.key)}
+                    className={`text-left p-5 border-2 transition-all ${
+                      active
+                        ? "border-gold bg-gold/5"
+                        : "border-surface-border hover:border-foreground/20 bg-surface"
+                    }`}
+                  >
+                    <div className={`mb-3 ${active ? "text-gold" : "text-muted"}`}>{m.icon}</div>
+                    <h3 className={`font-semibold text-sm mb-1 ${active ? "text-gold" : "text-foreground"}`}>{m.title}</h3>
+                    <p className="text-xs text-muted leading-relaxed">{m.desc}</p>
+                    {active && (
+                      <div className="mt-3 inline-flex items-center gap-1 text-[10px] text-gold uppercase tracking-wider font-semibold">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Active
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="bg-surface border border-surface-border p-5">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-gold shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+              <div>
+                <p className="text-sm text-foreground font-medium">How it works</p>
+                <ul className="text-xs text-muted mt-1 space-y-1 list-disc list-inside">
+                  <li><strong>Customer Self-Order:</strong> Customers use the /order page with OTP verification. Waiters cannot place orders.</li>
+                  <li><strong>Waiter Only:</strong> The /order page is disabled for customers. Only waiters can place orders from their portal.</li>
+                  <li><strong>Both:</strong> Both systems work simultaneously — customers can self-order and waiters can place orders too.</li>
+                </ul>
+                <p className="text-xs text-muted mt-2">Remember to click <strong>Save Changes</strong> to apply.</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

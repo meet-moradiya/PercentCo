@@ -68,6 +68,9 @@ function OrderPageInner() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [verifiedCode, setVerifiedCode] = useState<string | null>(null);
 
+  // Order mode
+  const [orderMode, setOrderMode] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     try {
       const [settingsRes, menuRes] = await Promise.all([fetch("/api/settings"), fetch("/api/menu")]);
@@ -76,6 +79,11 @@ function OrderPageInner() {
 
       if (settingsData.settings?.tables) {
         setTables(settingsData.settings.tables.filter((t: Table) => t.isActive));
+      }
+      if (settingsData.settings?.orderMode) {
+        setOrderMode(settingsData.settings.orderMode);
+      } else {
+        setOrderMode("both");
       }
       if (menuData.items) {
         setMenuItems(menuData.items);
@@ -256,6 +264,31 @@ function OrderPageInner() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Block access when waiter-only mode
+  if (orderMode === "waiter") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 mx-auto border-2 border-gold/30 rounded-full flex items-center justify-center">
+            <svg className="w-10 h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </div>
+          <h1 className="font-display text-3xl text-foreground">Waiter Service Only</h1>
+          <p className="text-foreground/60">
+            Online ordering is currently disabled. Please ask your waiter to place an order for you.
+          </p>
+          <Link
+            href="/"
+            className="inline-block px-6 py-3 border border-gold text-gold text-sm tracking-widest uppercase hover:bg-gold hover:text-background transition-all"
+          >
+            Back to Home
+          </Link>
+        </div>
       </div>
     );
   }

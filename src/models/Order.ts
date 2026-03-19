@@ -17,6 +17,7 @@ export interface IOrder extends Document {
   notes: string;
   reservationId: mongoose.Types.ObjectId | null;
   customerId: string; // phone number or "walk-in"
+  source: "customer" | "waiter";
   completedAt: Date | null;
   createdAt: Date;
 }
@@ -46,6 +47,7 @@ const OrderSchema = new Schema<IOrder>(
     notes: { type: String, default: "" },
     reservationId: { type: Schema.Types.ObjectId, ref: "Reservation", default: null },
     customerId: { type: String, required: true, lowercase: true }, // phone number or "walk-in"
+    source: { type: String, enum: ["customer", "waiter"], default: "customer" },
     completedAt: { type: Date, default: null },
   },
   { timestamps: true }

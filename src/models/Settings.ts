@@ -22,6 +22,8 @@ export interface EventPromo {
   isActive: boolean;
 }
 
+export type OrderMode = "customer" | "waiter" | "both";
+
 export interface ISettings extends Document {
   totalTables: number;
   tables: TableConfig[];
@@ -32,6 +34,7 @@ export interface ISettings extends Document {
   closedDates: ClosedDate[];
   events: EventPromo[];
   qrCustomText: string;
+  orderMode: OrderMode;
 }
 
 const TableConfigSchema = new Schema<TableConfig>(
@@ -76,6 +79,7 @@ const SettingsSchema = new Schema<ISettings>(
     closedDates: { type: [ClosedDateSchema], default: [] },
     events: { type: [EventPromoSchema], default: [] },
     qrCustomText: { type: String, default: "Scan to order from your table" },
+    orderMode: { type: String, enum: ["customer", "waiter", "both"], default: "both" },
   },
   { timestamps: true }
 );

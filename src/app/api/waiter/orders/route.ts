@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import MenuItem from "@/models/MenuItem";
+import Reservation from "@/models/Reservation";
+import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
 
 function getWaiterPayload(req: NextRequest) {
@@ -93,6 +96,118 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, status: order.status });
   } catch (error) {
     console.error("Waiter orders PATCH error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// POST — Waiter: place a new order for a table (server-side price lookup, no OTP)
+export async function POST(req: NextRequest) {
+  const payload = getWaiterPayload(req);
+  if (!payload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await connectDB();
+
+    // Check order mode — waiters can only place orders in "waiter" or "both" mode
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings: any = await Settings.findOne().lean();
+    const orderMode = settings?.orderMode || "both";
+    if (orderMode === "customer") {
+      return NextResponse.json(
+        { error: "Waiter ordering is disabled. Only customer self-ordering is active." },
+        { status: 403 }
+      );
+    }
+
+    const { tableNumber, items, notes } = await req.json();
+
+    if (!tableNumber || !items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        { error: "Table number and at least one item are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate table exists and is active
+    if (settings) {
+      const table = (settings.tables || []).find(
+        (t: { number: number; isActive: boolean }) => t.number === tableNumber && t.isActive
+      );
+      if (!table) {
+        return NextResponse.json({ error: "Invalid or inactive table" }, { status: 400 });
+      }
+    }
+
+    // Validate someone is seated at this table
+    const today = new Date().toISOString().split("T")[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const activeReservation: any = await Reservation.findOne({
+      tableNumber: Number(tableNumber),
+      date: today,
+      status: "seated",
+    }).lean();
+
+    if (!activeReservation) {
+      return NextResponse.json(
+        { error: "No one is currently seated at this table. A guest must be seated before placing an order." },
+        { status: 400 }
+      );
+    }
+
+    // Look up prices server-side from MenuItem collection
+    const menuItemIds = items.map((item: { menuItemId: string }) => item.menuItemId);
+    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } }).lean();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const menuMap = new Map(menuItems.map((m: any) => [m._id.toString(), m]));
+
+    let total = 0;
+    const validatedItems = [];
+    for (const item of items) {
+      const menuItem = menuMap.get(item.menuItemId);
+      if (!menuItem) {
+        return NextResponse.json(
+          { error: `Menu item not found: ${item.name || item.menuItemId}` },
+          { status: 400 }
+        );
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const price = parseFloat((menuItem as any).price);
+      const quantity = Math.max(1, parseInt(item.quantity));
+      total += price * quantity;
+      validatedItems.push({
+        menuItemId: item.menuItemId,
+        name: item.name || (menuItem as any).name,
+        price,
+        quantity,
+        isJain: !!item.isJain,
+      });
+    }
+
+    // Reuse the activeReservation already fetched during seated validation
+    const reservationId = activeReservation?._id || null;
+    const customerId = activeReservation?.phone || "walk-in";
+    const customerName = activeReservation?.name || "Guest";
+
+    const order = await Order.create({
+      tableNumber: Number(tableNumber),
+      customerName,
+      items: validatedItems,
+      total: Math.round(total * 100) / 100,
+      notes: notes || "",
+      status: "pending",
+      reservationId,
+      customerId,
+      source: "waiter",
+    });
+
+    return NextResponse.json(
+      { success: true, order: { id: order._id, tableNumber: order.tableNumber, total: order.total, status: order.status } },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Waiter orders POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -32,6 +32,7 @@ export async function GET() {
         closedDates: [],
         events: [],
         qrCustomText: "Scan to order from your table",
+        orderMode: "both",
       });
       settings = settings.toObject();
     }
@@ -53,7 +54,7 @@ export async function PUT(req: NextRequest) {
 
     await connectDB();
     const body = await req.json();
-    const { totalTables, tables, slotDuration, openTime, closeTime, slotInterval, closedDates, events, qrCustomText } = body;
+    const { totalTables, tables, slotDuration, openTime, closeTime, slotInterval, closedDates, events, qrCustomText, orderMode } = body;
 
     let settings = await Settings.findOne();
 
@@ -69,6 +70,7 @@ export async function PUT(req: NextRequest) {
         closedDates: closedDates || [],
         events: events || [],
         qrCustomText: qrCustomText || "Scan to order from your table",
+        orderMode: orderMode || "both",
       });
     } else {
       if (totalTables !== undefined) settings.totalTables = totalTables;
@@ -80,6 +82,7 @@ export async function PUT(req: NextRequest) {
       if (closedDates !== undefined) settings.closedDates = closedDates;
       if (events !== undefined) settings.events = events;
       if (qrCustomText !== undefined) settings.qrCustomText = qrCustomText;
+      if (orderMode !== undefined) settings.orderMode = orderMode;
       await settings.save();
     }
 
