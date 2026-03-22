@@ -43,6 +43,8 @@ export default function CookQueue() {
   const [orders, setOrders] = useState<QueueOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"pending" | "preparing" | "ready">("pending");
   const prevItemCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -52,13 +54,16 @@ export default function CookQueue() {
       const res = await fetch("/api/chef/stations");
       const data = await res.json();
       if (data.stations) setStations(data.stations);
-      
+
       // We can also fetch the current user to get their activeStation
       const userRes = await fetch("/api/auth/me");
       if (userRes.ok) {
         const userData = await userRes.json();
         if (userData.admin && userData.admin.activeStation) {
-           setSelectedStation(userData.admin.activeStation);
+          setSelectedStation(userData.admin.activeStation);
+        }
+        if (userData.admin && userData.admin.email) {
+          setUserEmail(userData.admin.email);
         }
       }
     } catch (e) {
@@ -83,7 +88,7 @@ export default function CookQueue() {
 
       const res = await fetch(`/api/chef/orders?station=${station.slug}`);
       const data = await res.json();
-      
+
       const allOrders: QueueOrder[] = data.orders || [];
 
       // Sort orders by creation time (oldest first)
@@ -94,10 +99,14 @@ export default function CookQueue() {
       if (totalItems > prevItemCountRef.current && prevItemCountRef.current > 0) {
         try {
           if (!audioRef.current) {
-            audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Dg3x0bXV8goeEe3JodHyCh4V+dG1zeIGGhH1zbXR5gYaFfXNtdHmBhoV9c210eYGGhX1zbXR5gYaFfXNtdHmBhoV9c210eQ==");
+            audioRef.current = new Audio(
+              "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Dg3x0bXV8goeEe3JodHyCh4V+dG1zeIGGhH1zbXR5gYaFfXNtdHmBhoV9c210eYGGhX1zbXR5gYaFfXNtdHmBhoV9c210eQ==",
+            );
           }
           audioRef.current.play().catch(() => {});
-        } catch { /* audio not available */ }
+        } catch {
+          /* audio not available */
+        }
       }
       prevItemCountRef.current = totalItems;
 
@@ -179,7 +188,7 @@ export default function CookQueue() {
   for (const order of orders) {
     for (const item of order.items) {
       if (item.itemStatus === "pending") pendingItems.push({ order, item });
-      else if (item.itemStatus === "preparing") cookingItems.push({ order, item });
+      else if (item.itemStatus === "preparing" && item.preparedBy === userEmail) cookingItems.push({ order, item });
       else if (item.itemStatus === "ready") readyItems.push({ order, item });
     }
   }
@@ -209,21 +218,36 @@ export default function CookQueue() {
         </div>
       </div>
 
-      {/* Stats bar */}
+      {/* Stats and Tabs bar */}
       {selectedStation && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-surface border border-surface-border p-4">
-            <p className="text-muted text-xs tracking-wider uppercase">Pending</p>
-            <p className="text-2xl font-bold text-yellow-400 mt-1">{pendingItems.length}</p>
-          </div>
-          <div className="bg-surface border border-surface-border p-4">
-            <p className="text-muted text-xs tracking-wider uppercase">Cooking</p>
-            <p className="text-2xl font-bold text-orange-400 mt-1">{cookingItems.length}</p>
-          </div>
-          <div className="bg-surface border border-surface-border p-4">
-            <p className="text-muted text-xs tracking-wider uppercase">Ready</p>
-            <p className="text-2xl font-bold text-green-400 mt-1">{readyItems.length}</p>
-          </div>
+        <div className="grid grid-cols-3 gap-0 mb-6 bg-surface border border-surface-border">
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`p-4 transition-colors flex flex-col items-center justify-center border-b-2 ${
+              activeTab === "pending" ? "border-b-yellow-400 bg-yellow-500/5" : "border-b-transparent hover:bg-surface-border/50"
+            }`}
+          >
+            <p className={`text-xs tracking-wider uppercase ${activeTab === "pending" ? "text-yellow-400 font-bold" : "text-muted"}`}>Pending</p>
+            <p className={`text-2xl font-bold mt-1 ${activeTab === "pending" ? "text-yellow-400" : "text-foreground"}`}>{pendingItems.length}</p>
+          </button>
+          <button
+            onClick={() => setActiveTab("preparing")}
+            className={`p-4 transition-colors flex flex-col items-center justify-center border-l border-r border-surface-border border-b-2 ${
+              activeTab === "preparing" ? "border-b-orange-400 bg-orange-500/5" : "border-b-transparent hover:bg-surface-border/50"
+            }`}
+          >
+            <p className={`text-xs tracking-wider uppercase ${activeTab === "preparing" ? "text-orange-400 font-bold" : "text-muted"}`}>My Cooking</p>
+            <p className={`text-2xl font-bold mt-1 ${activeTab === "preparing" ? "text-orange-400" : "text-foreground"}`}>{cookingItems.length}</p>
+          </button>
+          <button
+            onClick={() => setActiveTab("ready")}
+            className={`p-4 transition-colors flex flex-col items-center justify-center border-b-2 ${
+              activeTab === "ready" ? "border-b-green-400 bg-green-500/5" : "border-b-transparent hover:bg-surface-border/50"
+            }`}
+          >
+            <p className={`text-xs tracking-wider uppercase ${activeTab === "ready" ? "text-green-400 font-bold" : "text-muted"}`}>Ready</p>
+            <p className={`text-2xl font-bold mt-1 ${activeTab === "ready" ? "text-green-400" : "text-foreground"}`}>{readyItems.length}</p>
+          </button>
         </div>
       )}
 
@@ -231,7 +255,11 @@ export default function CookQueue() {
       {!selectedStation && (
         <div className="bg-surface border border-surface-border p-12 text-center">
           <svg className="w-16 h-16 text-muted/30 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+            />
           </svg>
           <p className="text-foreground text-lg font-medium mb-2">No Station Selected</p>
           <p className="text-muted text-sm mb-4">Please select a kitchen station from the dropdown above to view orders.</p>
@@ -248,13 +276,9 @@ export default function CookQueue() {
       {/* Queue */}
       {!loading && selectedStation && (
         <div className="space-y-6">
-          {/* Pending Items — Main focus */}
-          {pendingItems.length > 0 && (
-            <div>
-              <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                Pending ({pendingItems.length})
-              </h2>
+          {/* Pending Items */}
+          {activeTab === "pending" &&
+            (pendingItems.length > 0 ? (
               <div className="space-y-2">
                 {pendingItems.map(({ order, item }) => (
                   <div
@@ -269,10 +293,17 @@ export default function CookQueue() {
                           <span className="px-1.5 py-0.5 text-xs bg-gold/20 text-gold border border-gold/30 font-bold">×{item.quantity}</span>
                         )}
                         {item.isJain && (
-                          <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 uppercase tracking-wider">Jain</span>
+                          <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 uppercase tracking-wider">
+                            Jain
+                          </span>
                         )}
                         {item.preCookable && (
-                          <span className="px-1.5 py-0.5 text-[10px] bg-yellow-500/15 text-yellow-400 border border-yellow-400/30 uppercase tracking-wider" title="Usually in stock — click Ready if available">💡 Pre-cookable</span>
+                          <span
+                            className="px-1.5 py-0.5 text-[10px] bg-yellow-500/15 text-yellow-400 border border-yellow-400/30 uppercase tracking-wider"
+                            title="Usually in stock — click Ready if available"
+                          >
+                            💡 Pre-cookable
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted">
@@ -282,7 +313,9 @@ export default function CookQueue() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateItemStatus(order._id, item._itemIndex, "preparing")}
+                        onClick={() => {
+                          updateItemStatus(order._id, item._itemIndex, "preparing");
+                        }}
                         disabled={updatingItem === `${order._id}-${item._itemIndex}`}
                         className="px-4 py-2 text-xs bg-orange-500/15 text-orange-400 border border-orange-400/30 hover:bg-orange-500/25 transition-colors tracking-wider uppercase font-semibold disabled:opacity-50"
                       >
@@ -299,16 +332,16 @@ export default function CookQueue() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-surface border border-surface-border p-12 text-center mt-6">
+                <p className="text-muted text-lg">No pending orders</p>
+                <p className="text-muted/60 text-sm mt-1">New incoming items will appear here</p>
+              </div>
+            ))}
 
           {/* Cooking Items */}
-          {cookingItems.length > 0 && (
-            <div>
-              <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse" />
-                Cooking ({cookingItems.length})
-              </h2>
+          {activeTab === "preparing" &&
+            (cookingItems.length > 0 ? (
               <div className="space-y-2">
                 {cookingItems.map(({ order, item }) => (
                   <div
@@ -323,12 +356,13 @@ export default function CookQueue() {
                           <span className="px-1.5 py-0.5 text-xs bg-gold/20 text-gold border border-gold/30 font-bold">×{item.quantity}</span>
                         )}
                         {item.isJain && (
-                          <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 uppercase tracking-wider">Jain</span>
+                          <span className="px-1.5 py-0.5 text-[10px] bg-green-900/40 text-green-400 border border-green-500/30 uppercase tracking-wider">
+                            Jain
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted">
                         <span className="text-orange-400">⏱ Cooking for {item.startedAt ? getTimeElapsed(item.startedAt) : "..."}</span>
-                        {item.preparedBy && <span>by {item.preparedBy}</span>}
                       </div>
                     </div>
                     <button
@@ -341,41 +375,39 @@ export default function CookQueue() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-surface border border-surface-border p-12 text-center mt-6">
+                <p className="text-muted text-lg">No items currently cooking</p>
+                <p className="text-muted/60 text-sm mt-1">Items you start cooking will appear here</p>
+              </div>
+            ))}
 
-          {/* Ready Items (collapsed) */}
-          {readyItems.length > 0 && (
-            <div>
-              <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                Ready ({readyItems.length})
-              </h2>
-              <div className="space-y-1">
+          {/* Ready Items */}
+          {activeTab === "ready" &&
+            (readyItems.length > 0 ? (
+              <div className="space-y-2">
                 {readyItems.map(({ order, item }) => (
                   <div
                     key={`${order._id}-${item._itemIndex}`}
-                    className="bg-surface border border-surface-border border-l-4 border-l-green-500 px-4 py-2.5 flex items-center justify-between opacity-60"
+                    className="bg-surface border border-surface-border border-l-4 border-l-green-500 px-4 py-4 flex items-center justify-between opacity-80"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-gold font-bold text-sm">T{order.tableNumber}</span>
                       <span className="text-foreground text-sm">{item.name}</span>
                       {item.quantity > 1 && <span className="text-xs text-gold">×{item.quantity}</span>}
                     </div>
-                    <span className="text-green-400 text-xs">✓ Ready</span>
+                    <span className="text-green-400 text-xs font-bold uppercase tracking-wider bg-green-500/10 px-2 py-1 border border-green-500/20">
+                      ✓ Ready
+                    </span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {pendingItems.length === 0 && cookingItems.length === 0 && readyItems.length === 0 && (
-            <div className="bg-surface border border-surface-border p-12 text-center">
-              <p className="text-muted text-lg">No active orders for your station</p>
-              <p className="text-muted/60 text-sm mt-1">New orders will appear here automatically</p>
-            </div>
-          )}
+            ) : (
+              <div className="bg-surface border border-surface-border p-12 text-center mt-6">
+                <p className="text-muted text-lg">No ready items</p>
+                <p className="text-muted/60 text-sm mt-1">Completed items for your station will appear here</p>
+              </div>
+            ))}
         </div>
       )}
     </div>
