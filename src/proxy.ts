@@ -6,7 +6,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-
 interface TokenPayload {
   adminId: string;
   email: string;
-  role: "admin" | "chef" | "waiter";
+  role: "admin" | "chef" | "waiter" | "cook";
 }
 
 async function getPayload(req: NextRequest): Promise<TokenPayload | null> {
@@ -33,7 +33,8 @@ export async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/admin/login") ||
     pathname.startsWith("/chef/login") ||
-    pathname.startsWith("/waiter/login")
+    pathname.startsWith("/waiter/login") ||
+    pathname.startsWith("/cook/login")
   ) {
     const payload = await getPayload(req);
     if (payload) {
@@ -41,6 +42,8 @@ export async function proxy(req: NextRequest) {
         return NextResponse.redirect(new URL("/chef", req.url));
       } else if (payload.role === "waiter") {
         return NextResponse.redirect(new URL("/waiter", req.url));
+      } else if (payload.role === "cook") {
+        return NextResponse.redirect(new URL("/cook", req.url));
       } else {
         return NextResponse.redirect(new URL("/admin", req.url));
       }
@@ -56,7 +59,7 @@ export async function proxy(req: NextRequest) {
     }
     // Only admins can access the admin panel
     if (payload.role !== "admin") {
-      const redirectPath = payload.role === "chef" ? "/chef" : "/waiter";
+      const redirectPath = payload.role === "chef" ? "/chef" : payload.role === "waiter" ? "/waiter" : "/cook";
       return NextResponse.redirect(new URL(redirectPath, req.url));
     }
     return NextResponse.next();
@@ -69,7 +72,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/chef/login", req.url));
     }
     if (payload.role !== "chef" && payload.role !== "admin") {
-      const redirectPath = payload.role === "waiter" ? "/waiter" : "/admin";
+      const redirectPath = payload.role === "waiter" ? "/waiter" : payload.role === "cook" ? "/cook" : "/admin";
       return NextResponse.redirect(new URL(redirectPath, req.url));
     }
     return NextResponse.next();
@@ -82,7 +85,20 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/waiter/login", req.url));
     }
     if (payload.role !== "waiter" && payload.role !== "admin") {
-      const redirectPath = payload.role === "chef" ? "/chef" : "/admin";
+      const redirectPath = payload.role === "chef" ? "/chef" : payload.role === "cook" ? "/cook" : "/admin";
+      return NextResponse.redirect(new URL(redirectPath, req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Protect /cook routes
+  if (pathname.startsWith("/cook")) {
+    const payload = await getPayload(req);
+    if (!payload) {
+      return NextResponse.redirect(new URL("/cook/login", req.url));
+    }
+    if (payload.role !== "cook" && payload.role !== "chef" && payload.role !== "admin") {
+      const redirectPath = payload.role === "waiter" ? "/waiter" : "/admin";
       return NextResponse.redirect(new URL(redirectPath, req.url));
     }
     return NextResponse.next();
@@ -92,5 +108,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/chef/:path*", "/waiter/:path*"],
+  matcher: ["/admin/:path*", "/chef/:path*", "/waiter/:path*", "/cook/:path*"],
 };

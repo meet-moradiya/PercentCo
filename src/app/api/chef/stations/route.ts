@@ -9,7 +9,7 @@ function getChefPayload(req: NextRequest) {
   if (!token) return null;
   const payload = verifyToken(token);
   if (!payload) return null;
-  if (payload.role !== "chef" && payload.role !== "admin") return null;
+  if (payload.role !== "chef" && payload.role !== "admin" && payload.role !== "cook") return null;
   return payload;
 }
 
@@ -26,14 +26,14 @@ export async function GET(req: NextRequest) {
 
     // Count cooks per station
     const cooks = await Admin.find(
-      { role: "chef", activeStations: { $exists: true, $ne: [] } },
-      { name: 1, activeStations: 1 }
+      { role: "cook", activeStation: { $exists: true, $ne: null } },
+      { name: 1, activeStation: 1 }
     ).lean();
 
     const stationsWithCooks = stations.map((station) => {
-      const stationCooks = cooks.filter((cook) =>
+      const stationCooks = cooks.filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (cook as any).activeStations?.some((s: any) => s.toString() === station._id.toString())
+        (cook: any) => cook.activeStation && cook.activeStation.toString() === station._id.toString()
       );
       return {
         ...station,

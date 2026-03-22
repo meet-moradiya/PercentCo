@@ -9,7 +9,7 @@ function getChefPayload(req: NextRequest) {
   if (!token) return null;
   const payload = verifyToken(token);
   if (!payload) return null;
-  if (payload.role !== "chef" && payload.role !== "admin") return null;
+  if (payload.role !== "chef" && payload.role !== "admin" && payload.role !== "cook") return null;
   return payload;
 }
 

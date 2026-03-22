@@ -4,23 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/context/ThemeProvider";
 
-export default function ChefLayout({ children }: { children: React.ReactNode }) {
+export default function CookLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/chef/login");
+    router.push("/cook/login");
   };
 
   // Don't show layout on login page
-  if (pathname === "/chef/login") {
+  if (pathname === "/cook/login") {
     return <>{children}</>;
   }
-
-  const isChefDashboard = pathname === "/chef/dashboard";
-  const isCookQueue = pathname === "/chef";
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -39,13 +36,12 @@ export default function ChefLayout({ children }: { children: React.ReactNode }) 
                 PERCENTCO
               </h1>
               <p className="text-[10px] text-orange-400 tracking-wider uppercase">
-                {isChefDashboard ? "Chef Dashboard" : "Kitchen Display"}
+                Cook Portal
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Removed navigation since Cook Queue is now separate */}
             <button
               onClick={toggleTheme}
               className="p-2 text-muted hover:text-foreground transition-colors"

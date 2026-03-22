@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import MenuItem from "@/models/MenuItem";
+import Station from "@/models/Station";
 import Reservation from "@/models/Reservation";
 import Settings from "@/models/Settings";
 import { verifyToken } from "@/lib/auth";
@@ -162,6 +163,16 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const menuMap = new Map(menuItems.map((m: any) => [m._id.toString(), m]));
 
+    // Batch fetch all stations
+    const stationIds = menuItems
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((mi: any) => mi.station)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((mi: any) => mi.station);
+    const stations = await Station.find({ _id: { $in: stationIds } }).lean();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stationMap = new Map(stations.map((s: any) => [s._id.toString(), s]));
+
     let total = 0;
     const validatedItems = [];
     for (const item of items) {
@@ -176,12 +187,28 @@ export async function POST(req: NextRequest) {
       const price = parseFloat((menuItem as any).price);
       const quantity = Math.max(1, parseInt(item.quantity));
       total += price * quantity;
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stationData = (menuItem as any).station ? stationMap.get((menuItem as any).station.toString()) : null;
+
       validatedItems.push({
         menuItemId: item.menuItemId,
         name: item.name || (menuItem as any).name,
         price,
         quantity,
         isJain: !!item.isJain,
+        station: stationData?._id || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stationName: (stationData as any)?.name || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stationSlug: (stationData as any)?.slug || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        servePhase: (stationData as any)?.servePhase || 2,
+        itemStatus: "pending",
+        startedAt: null,
+        readyAt: null,
+        preparedBy: null,
+        preCookable: !!(menuItem as any)?.preCookable,
       });
     }
 
