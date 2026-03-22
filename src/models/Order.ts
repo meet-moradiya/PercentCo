@@ -6,6 +6,15 @@ export interface OrderItem {
   price: number;
   quantity: number;
   isJain: boolean;
+  station: mongoose.Types.ObjectId | null;
+  stationName: string;
+  stationSlug: string;
+  servePhase: number;
+  itemStatus: "pending" | "preparing" | "ready";
+  startedAt: Date | null;
+  readyAt: Date | null;
+  preparedBy: string | null;
+  preCookable: boolean;
 }
 
 export interface IOrder extends Document {
@@ -13,7 +22,7 @@ export interface IOrder extends Document {
   customerName: string;
   items: OrderItem[];
   total: number;
-  status: "pending" | "preparing" | "ready" | "served" | "cancelled";
+  status: "pending" | "preparing" | "partially_ready" | "ready" | "served" | "cancelled";
   notes: string;
   reservationId: mongoose.Types.ObjectId | null;
   customerId: string; // phone number or "walk-in"
@@ -29,6 +38,15 @@ const OrderItemSchema = new Schema<OrderItem>(
     price: { type: Number, required: true },
     quantity: { type: Number, required: true, min: 1 },
     isJain: { type: Boolean, default: false },
+    station: { type: Schema.Types.ObjectId, ref: "Station", default: null },
+    stationName: { type: String, default: "" },
+    stationSlug: { type: String, default: "" },
+    servePhase: { type: Number, default: 2 },
+    itemStatus: { type: String, enum: ["pending", "preparing", "ready"], default: "pending" },
+    startedAt: { type: Date, default: null },
+    readyAt: { type: Date, default: null },
+    preparedBy: { type: String, default: null },
+    preCookable: { type: Boolean, default: false },
   },
   { _id: false }
 );
@@ -41,7 +59,7 @@ const OrderSchema = new Schema<IOrder>(
     total: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "preparing", "ready", "served", "cancelled"],
+      enum: ["pending", "preparing", "partially_ready", "ready", "served", "cancelled"],
       default: "pending",
     },
     notes: { type: String, default: "" },

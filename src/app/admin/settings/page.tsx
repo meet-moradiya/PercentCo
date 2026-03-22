@@ -10,6 +10,14 @@ interface TableConfig {
   capacity: number;
   isActive: boolean;
 }
+interface StationItem {
+  _id: string;
+  name: string;
+  slug: string;
+  servePhase: number;
+  isActive: boolean;
+  sortOrder: number;
+}
 interface ClosedDate {
   date: string;
   reason: string;
@@ -24,7 +32,7 @@ interface EventPromo {
   badgeColor: string;
   isActive: boolean;
 }
-type SettingsTab = "hours" | "tables" | "closures" | "events" | "admins" | "ordering";
+type SettingsTab = "hours" | "tables" | "closures" | "events" | "admins" | "ordering" | "kitchen";
 type OrderMode = "customer" | "waiter" | "both";
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("hours");
@@ -68,6 +76,14 @@ export default function AdminSettings() {
   });
   const [confirmDeleteTableNum, setConfirmDeleteTableNum] = useState<number | null>(null);
   const [confirmDeleteAdmin, setConfirmDeleteAdmin] = useState<{ id: string; email: string } | null>(null);
+  // Station management
+  const [stations, setStations] = useState<StationItem[]>([]);
+  const [loadingStations, setLoadingStations] = useState(false);
+  const [showStationModal, setShowStationModal] = useState(false);
+  const [editingStationId, setEditingStationId] = useState<string | null>(null);
+  const [stationForm, setStationForm] = useState({ name: "", servePhase: 2, sortOrder: 0 });
+  const [savingStation, setSavingStation] = useState(false);
+  const [confirmDeleteStation, setConfirmDeleteStation] = useState<{ id: string; name: string } | null>(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -108,6 +124,72 @@ export default function AdminSettings() {
   useEffect(() => {
     if (activeTab === "admins" && admins.length === 0) loadAdmins();
   }, [activeTab, loadAdmins, admins.length]);
+  const loadStations = useCallback(async () => {
+    setLoadingStations(true);
+    try {
+      const res = await fetch("/api/admin/stations");
+      const data = await res.json();
+      if (data.stations) setStations(data.stations);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingStations(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (activeTab === "kitchen" && stations.length === 0) loadStations();
+  }, [activeTab, loadStations, stations.length]);
+  const openStationCreate = () => {
+    setEditingStationId(null);
+    setStationForm({ name: "", servePhase: 2, sortOrder: 0 });
+    setShowStationModal(true);
+  };
+  const openStationEdit = (s: StationItem) => {
+    setEditingStationId(s._id);
+    setStationForm({ name: s.name, servePhase: s.servePhase, sortOrder: s.sortOrder });
+    setShowStationModal(true);
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const saveStation = async () => {
+    if (!stationForm.name) return;
+    setSavingStation(true);
+    try {
+      if (editingStationId) {
+        const res = await fetch(`/api/admin/stations/${editingStationId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(stationForm) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      } else {
+        const res = await fetch("/api/admin/stations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(stationForm) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      }
+      setShowStationModal(false);
+      loadStations();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSavingStation(false);
+    }
+  };
+  const deleteStation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/stations/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      loadStations();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+  const toggleStation = async (s: StationItem) => {
+    try {
+      await fetch(`/api/admin/stations/${s._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !s.isActive }) });
+      loadStations();
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const addAdmin = async () => {
     if (!adminForm.name || !adminForm.email || !adminForm.password) return alert("Fill all fields");
     try {
@@ -372,6 +454,12 @@ export default function AdminSettings() {
         />
       </svg>
     ),
+    kitchen: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.047 8.287 8.287 0 009 9.601a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.468 5.99 5.99 0 00-1.925 3.547 5.975 5.975 0 01-2.133-1.001A3.75 3.75 0 0012 18z" />
+      </svg>
+    ),
   };
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "hours", label: "Hours & Slots" },
@@ -379,8 +467,14 @@ export default function AdminSettings() {
     { key: "closures", label: "Closures" },
     { key: "events", label: "Events & Promos" },
     { key: "ordering", label: "Ordering" },
+    { key: "kitchen", label: "Kitchen" },
     { key: "admins", label: "Staff" },
   ];
+  const servePhaseLabels: Record<number, { label: string; color: string }> = {
+    1: { label: "Immediate (Starters/Drinks)", color: "text-green-400" },
+    2: { label: "Main Course", color: "text-blue-400" },
+    3: { label: "Dessert", color: "text-purple-400" },
+  };
   const orderModes: { key: OrderMode; title: string; desc: string; icon: React.ReactNode }[] = [
     {
       key: "customer",
@@ -1146,6 +1240,176 @@ export default function AdminSettings() {
           </div>
         </div>
       )}
+      {/* ========== KITCHEN TAB ========== */}
+      {activeTab === "kitchen" && (
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Total Stations</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{stations.length}</p>
+            </div>
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Active</p>
+              <p className="text-2xl font-bold text-green-400 mt-1">{stations.filter((s) => s.isActive).length}</p>
+            </div>
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Phase 1 (Immediate)</p>
+              <p className="text-2xl font-bold text-green-400 mt-1">{stations.filter((s) => s.servePhase === 1).length}</p>
+            </div>
+            <div className="bg-surface border border-surface-border p-5">
+              <p className="text-muted text-xs tracking-wider uppercase">Phase 2 (Main)</p>
+              <p className="text-2xl font-bold text-blue-400 mt-1">{stations.filter((s) => s.servePhase === 2).length}</p>
+            </div>
+          </div>
+          {/* Add button */}
+          <div className="flex justify-end">
+            <button
+              onClick={openStationCreate}
+              className="px-6 py-2.5 bg-gold text-background text-sm font-semibold tracking-widest uppercase hover:bg-gold-light transition-colors"
+            >
+              + Add Station
+            </button>
+          </div>
+          {/* Stations list */}
+          <div className="bg-surface border border-surface-border">
+            <div className="px-6 py-4 border-b border-surface-border">
+              <h2 className="text-foreground font-medium">Kitchen Stations</h2>
+              <p className="text-xs text-muted mt-1">Each station receives items from orders automatically. Cooks select their station when they log in.</p>
+            </div>
+            {loadingStations ? (
+              <div className="p-8 text-center text-muted">Loading...</div>
+            ) : stations.length === 0 ? (
+              <div className="p-8 text-center text-muted text-sm">No stations configured. Add stations like Curry, Tandoor, Rice, etc.</div>
+            ) : (
+              <div className="divide-y divide-surface-border">
+                {stations.map((s) => {
+                  const phaseInfo = servePhaseLabels[s.servePhase] || servePhaseLabels[2];
+                  return (
+                    <div key={s._id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 hover:bg-surface-light transition-colors gap-3 ${!s.isActive ? "opacity-50" : ""}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-foreground text-lg">{s.name}</p>
+                          <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-surface-border ${phaseInfo.color}`}>
+                            Phase {s.servePhase}
+                          </span>
+                          {!s.isActive && (
+                            <span className="px-2 py-0.5 text-[10px] border border-surface-border text-muted uppercase tracking-wider">Inactive</span>
+                          )}
+                        </div>
+                        <p className="text-muted text-xs">{phaseInfo.label} · Slug: {s.slug}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleStation(s)}
+                          className={`px-2 py-1 text-xs border transition-colors ${s.isActive ? "text-green-400 border-green-400/30 hover:bg-green-400/10" : "text-muted border-surface-border hover:text-foreground"}`}
+                        >
+                          {s.isActive ? "Active" : "Off"}
+                        </button>
+                        <button
+                          onClick={() => openStationEdit(s)}
+                          className="px-2 py-1 text-xs text-blue-400 border border-blue-400/30 hover:bg-blue-400/10 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteStation({ id: s._id, name: s.name })}
+                          className="px-2 py-1 text-xs text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* Info box */}
+          <div className="bg-surface border border-surface-border p-5">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-gold shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+              <div>
+                <p className="text-sm text-foreground font-medium">Serve Phases</p>
+                <ul className="text-xs text-muted mt-1 space-y-1 list-disc list-inside">
+                  <li><strong className="text-green-400">Phase 1 — Immediate:</strong> Items serve as soon as they are ready (starters, drinks, salads)</li>
+                  <li><strong className="text-blue-400">Phase 2 — Main Course:</strong> Items wait until ALL Phase 2 items for the table are ready, then serve together</li>
+                  <li><strong className="text-purple-400">Phase 3 — Dessert:</strong> Items wait until Phase 2 items are served before being released to the kitchen</li>
+                </ul>
+                <p className="text-xs text-muted mt-2">After creating stations, assign menu items to stations from the <strong>Menu Items</strong> page.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Station Create/Edit Modal */}
+      {showStationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-surface-border w-full max-w-md">
+            <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between">
+              <h2 className="text-foreground font-medium text-lg">{editingStationId ? "Edit Station" : "Add Station"}</h2>
+              <button onClick={() => setShowStationModal(false)} className="text-muted hover:text-foreground text-xl">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Station Name *</label>
+                <input
+                  type="text"
+                  value={stationForm.name}
+                  onChange={(e) => setStationForm({ ...stationForm, name: e.target.value })}
+                  className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  placeholder="e.g. Curry, Tandoor, Rice, Salad"
+                />
+              </div>
+              <div>
+                <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Serve Phase *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map((phase) => {
+                    const info = servePhaseLabels[phase];
+                    return (
+                      <button
+                        key={phase}
+                        onClick={() => setStationForm({ ...stationForm, servePhase: phase })}
+                        className={`p-3 border-2 text-center transition-all ${
+                          stationForm.servePhase === phase
+                            ? "border-gold bg-gold/5"
+                            : "border-surface-border hover:border-foreground/20"
+                        }`}
+                      >
+                        <p className={`text-sm font-semibold ${stationForm.servePhase === phase ? "text-gold" : info.color}`}>Phase {phase}</p>
+                        <p className="text-[10px] text-muted mt-0.5">{phase === 1 ? "Immediate" : phase === 2 ? "Main Course" : "Dessert"}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Sort Order</label>
+                <input
+                  type="number"
+                  value={stationForm.sortOrder}
+                  onChange={(e) => setStationForm({ ...stationForm, sortOrder: Number(e.target.value) })}
+                  className="w-24 bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-surface-border flex justify-end gap-3">
+              <button onClick={() => setShowStationModal(false)} className="px-5 py-2 text-sm text-muted border border-surface-border hover:text-foreground hover:border-foreground/30 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={saveStation}
+                disabled={savingStation || !stationForm.name}
+                className="px-5 py-2 text-sm bg-gold text-background font-semibold tracking-wider uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+              >
+                {savingStation ? "Saving..." : editingStationId ? "Update" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ========== ORDERING TAB ========== */}
       {activeTab === "ordering" && (
         <div className="space-y-6">
@@ -1253,6 +1517,16 @@ export default function AdminSettings() {
           if (confirmDeleteAdmin) deleteAdmin(confirmDeleteAdmin.id, confirmDeleteAdmin.email);
         }}
         onCancel={() => setConfirmDeleteAdmin(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteStation}
+        title="Delete Station"
+        message={`Are you sure you want to delete "${confirmDeleteStation?.name}"? Menu items assigned to this station must be reassigned first.`}
+        onConfirm={() => {
+          if (confirmDeleteStation) deleteStation(confirmDeleteStation.id);
+        }}
+        onCancel={() => setConfirmDeleteStation(null)}
       />
     </div>
   );

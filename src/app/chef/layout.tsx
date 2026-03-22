@@ -19,6 +19,9 @@ export default function ChefLayout({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
+  const isChefDashboard = pathname === "/chef/dashboard";
+  const isCookQueue = pathname === "/chef";
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Top Bar */}
@@ -35,11 +38,35 @@ export default function ChefLayout({ children }: { children: React.ReactNode }) 
               <h1 className="text-gold text-sm tracking-widest uppercase font-semibold" style={{ fontFamily: "'Playfair Display', serif" }}>
                 PERCENTCO
               </h1>
-              <p className="text-[10px] text-orange-400 tracking-wider uppercase">Kitchen Display</p>
+              <p className="text-[10px] text-orange-400 tracking-wider uppercase">
+                {isChefDashboard ? "Chef Dashboard" : "Kitchen Display"}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Navigation between Cook Queue and Chef Dashboard */}
+            <Link
+              href="/chef"
+              className={`px-3 py-1.5 text-xs tracking-wider uppercase border transition-all ${
+                isCookQueue
+                  ? "border-gold text-gold bg-gold/10"
+                  : "border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
+              }`}
+            >
+              Cook Queue
+            </Link>
+            <Link
+              href="/chef/dashboard"
+              className={`px-3 py-1.5 text-xs tracking-wider uppercase border transition-all ${
+                isChefDashboard
+                  ? "border-gold text-gold bg-gold/10"
+                  : "border-surface-border text-muted hover:text-foreground hover:border-foreground/30"
+              }`}
+            >
+              Chef Dashboard
+            </Link>
+
             <button
               onClick={toggleTheme}
               className="p-2 text-muted hover:text-foreground transition-colors"

@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Reservation from "@/models/Reservation";
 import Settings from "@/models/Settings";
+import MenuItemModel from "@/models/MenuItem";
+import Station from "@/models/Station";
 import { verifyToken } from "@/lib/auth";
 import { verifyTableCode } from "@/lib/email";
 
@@ -83,9 +85,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Validate items and calculate total
+    // Validate items, calculate total, and attach station info
     let total = 0;
     const validatedItems = [];
+
+    // Batch fetch all menu items for station info
+    const menuItemIds = items.map((item: { menuItemId: string }) => item.menuItemId);
+    const menuItems = await MenuItemModel.find({ _id: { $in: menuItemIds } }).lean();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const menuMap = new Map(menuItems.map((mi: any) => [mi._id.toString(), mi]));
+
+    // Batch fetch all stations
+    const stationIds = menuItems
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((mi: any) => mi.station)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((mi: any) => mi.station);
+    const stations = await Station.find({ _id: { $in: stationIds } }).lean();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stationMap = new Map(stations.map((s: any) => [s._id.toString(), s]));
+
     for (const item of items) {
       if (!item.menuItemId || !item.name || !item.price || !item.quantity) {
         return NextResponse.json(
@@ -96,12 +115,29 @@ export async function POST(req: NextRequest) {
       const price = parseFloat(item.price);
       const quantity = Math.max(1, parseInt(item.quantity));
       total += price * quantity;
+
+      const menuItem = menuMap.get(item.menuItemId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stationData = menuItem?.station ? stationMap.get((menuItem as any).station.toString()) : null;
+
       validatedItems.push({
         menuItemId: item.menuItemId,
         name: item.name,
         price,
         quantity,
         isJain: !!item.isJain,
+        station: stationData?._id || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stationName: (stationData as any)?.name || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stationSlug: (stationData as any)?.slug || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        servePhase: (stationData as any)?.servePhase || 2,
+        itemStatus: "pending",
+        startedAt: null,
+        readyAt: null,
+        preparedBy: null,
+        preCookable: !!(menuItem as any)?.preCookable,
       });
     }
 

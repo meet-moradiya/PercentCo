@@ -14,6 +14,14 @@ interface MenuItem {
   isJainAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
+  station?: string;
+  preCookable?: boolean;
+}
+
+interface StationOption {
+  _id: string;
+  name: string;
+  servePhase: number;
 }
 
 const emptyForm = {
@@ -26,6 +34,8 @@ const emptyForm = {
   isJainAvailable: false,
   isActive: true,
   sortOrder: 0,
+  station: "",
+  preCookable: false,
 };
 
 export default function AdminMenu() {
@@ -38,6 +48,7 @@ export default function AdminMenu() {
   const [activeTab, setActiveTab] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden">("all");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [stationOptions, setStationOptions] = useState<StationOption[]>([]);
 
   const loadItems = useCallback(async () => {
     try {
@@ -53,6 +64,11 @@ export default function AdminMenu() {
 
   useEffect(() => {
     loadItems();
+    // Load stations for dropdown
+    fetch("/api/admin/stations")
+      .then((r) => r.json())
+      .then((d) => { if (d.stations) setStationOptions(d.stations); })
+      .catch(console.error);
   }, [loadItems]);
 
   const openCreate = () => {
@@ -73,6 +89,8 @@ export default function AdminMenu() {
       isJainAvailable: item.isJainAvailable || false,
       isActive: item.isActive,
       sortOrder: item.sortOrder || 0,
+      station: item.station || "",
+      preCookable: item.preCookable || false,
     });
     setShowModal(true);
   };
@@ -240,6 +258,7 @@ export default function AdminMenu() {
                 <th className="px-4 py-3 text-left">Category</th>
                 <th className="px-4 py-3 text-left">Price</th>
                 <th className="px-4 py-3 text-left">Tag</th>
+                <th className="px-4 py-3 text-left">Station</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Actions</th>
               </tr>
@@ -282,6 +301,18 @@ export default function AdminMenu() {
                       <span className="px-2 py-0.5 text-xs border border-gold/30 text-gold">{item.tag}</span>
                     ) : (
                       <span className="text-muted/50">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.station ? (
+                      <span className="px-2 py-0.5 text-xs border border-blue-400/30 text-blue-400">
+                        {stationOptions.find((s) => s._id === item.station)?.name || "Assigned"}
+                      </span>
+                    ) : (
+                      <span className="text-muted/50 text-xs">None</span>
+                    )}
+                    {item.preCookable && (
+                      <span className="ml-1 text-[10px] text-yellow-400" title="Pre-cookable">💡</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -443,6 +474,36 @@ export default function AdminMenu() {
                   />
                   <span className="text-foreground text-sm">Available for Jain</span>
                 </label>
+              </div>
+
+              {/* Station & Pre-cookable */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-muted text-sm mb-1.5 tracking-wider uppercase">Kitchen Station</label>
+                  <select
+                    value={form.station}
+                    onChange={(e) => setForm({ ...form, station: e.target.value })}
+                    className="w-full bg-background border border-surface-border px-4 py-2.5 text-foreground focus:border-gold focus:outline-none transition-colors"
+                  >
+                    <option value="">No Station</option>
+                    {stationOptions.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name} (Phase {s.servePhase})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.preCookable}
+                      onChange={(e) => setForm({ ...form, preCookable: e.target.checked })}
+                      className="w-4 h-4 accent-gold"
+                    />
+                    <span className="text-foreground text-sm">Pre-cookable (💡 usually in stock)</span>
+                  </label>
+                </div>
               </div>
             </div>
 

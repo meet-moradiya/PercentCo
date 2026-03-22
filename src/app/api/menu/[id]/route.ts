@@ -25,7 +25,7 @@ export async function PUT(
     const body = await req.json();
 
     const updateFields: Record<string, unknown> = {};
-    const allowed = ["name", "description", "price", "category", "tag", "isJainAvailable", "isActive", "sortOrder"];
+    const allowed = ["name", "description", "price", "category", "tag", "isJainAvailable", "isActive", "sortOrder", "station", "preCookable"];
     for (const key of allowed) {
       if (body[key] !== undefined) updateFields[key] = body[key];
     }

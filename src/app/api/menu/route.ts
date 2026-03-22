@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    const { name, description, price, category, tag, image, isJainAvailable, isActive, sortOrder } = body;
+    const { name, description, price, category, tag, image, isJainAvailable, isActive, sortOrder, station, preCookable } = body;
 
     if (!name || !description || !price || !category) {
       return NextResponse.json(
@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
       isJainAvailable: !!isJainAvailable,
       isActive: isActive !== false,
       sortOrder: sortOrder || 0,
+      station: station || null,
+      preCookable: !!preCookable,
     });
 
     return NextResponse.json({ success: true, item }, { status: 201 });

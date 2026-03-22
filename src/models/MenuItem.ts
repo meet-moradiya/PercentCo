@@ -10,6 +10,8 @@ export interface IMenuItem extends Document {
   isJainAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
+  station: mongoose.Types.ObjectId | null;
+  preCookable: boolean;
   createdAt: Date;
 }
 
@@ -28,6 +30,8 @@ const MenuItemSchema = new Schema<IMenuItem>(
     isJainAvailable: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    station: { type: Schema.Types.ObjectId, ref: "Station", default: null },
+    preCookable: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
